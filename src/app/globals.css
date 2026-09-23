@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+/* ---------- Mira design tokens (light first, dark via media + data-theme) ---------- */
+:root {
+  --ground: #f5f2ec;
+  --panel: #fdfbf7;
+  --ink: #1b1812;
+  --ink-soft: #5c564a;
+  --line: #e3ddd0;
+  --accent: #a8874f;
+  --accent-ink: #7c6234;
+  --good: #3e7a4e;
+  --warn: #c79b3b;
+  --poor: #b4452f;
+  --chip: #eee9df;
+  --shadow: 0 24px 60px rgba(27, 24, 18, 0.14);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #171410;
+    --panel: #1f1b15;
+    --ink: #f0ebe0;
+    --ink-soft: #a79e8d;
+    --line: #332e25;
+    --accent: #c6a468;
+    --accent-ink: #d8bc87;
+    --good: #6fae7e;
+    --warn: #d6b25c;
+    --poor: #d06b52;
+    --chip: #2b261e;
+    --shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #171410;
+  --panel: #1f1b15;
+  --ink: #f0ebe0;
+  --ink-soft: #a79e8d;
+  --line: #332e25;
+  --accent: #c6a468;
+  --accent-ink: #d8bc87;
+  --good: #6fae7e;
+  --warn: #d6b25c;
+  --poor: #d06b52;
+  --chip: #2b261e;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-poor: var(--poor);
+  --color-chip: var(--chip);
+  --font-display: var(--font-playfair), "Didot", "Bodoni MT", Georgia, serif;
+  --font-body: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
+  --shadow-phone: var(--shadow);
+}
+
+html,
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* ---------- reusable primitives ---------- */
+.label {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.brand {
+  font-family: var(--font-display);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+  width: 100%;
+}
+.btn:active {
+  transform: scale(0.985);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--ground);
+}
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.chip.sel,
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--ground);
+  border-color: var(--ink);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+.pill.good {
+  background: color-mix(in srgb, var(--good) 16%, transparent);
+  color: var(--good);
+}
+.pill.warn {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+}
+.pill.poor {
+  background: color-mix(in srgb, var(--poor) 16%, transparent);
+  color: var(--poor);
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+.hide-scroll {
+  scrollbar-width: none;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fade-up 0.35s ease both;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--chip) 25%, var(--panel) 50%, var(--chip) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}

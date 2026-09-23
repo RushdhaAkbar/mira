@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIRA — Virtual Try-On Prototype</title>
+<style>
+  :root{
+    --ground:#F5F2EC;
+    --panel:#FDFBF7;
+    --ink:#1B1812;
+    --ink-soft:#5C564A;
+    --line:#E3DDD0;
+    --accent:#A8874F;
+    --accent-ink:#7C6234;
+    --good:#3E7A4E;
+    --warn:#C79B3B;
+    --poor:#B4452F;
+    --phone-bg:#FBF9F4;
+    --chip:#EEE9DF;
+    --shadow:0 24px 60px rgba(27,24,18,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#171410; --panel:#1F1B15; --ink:#F0EBE0; --ink-soft:#A79E8D;
+      --line:#332E25; --accent:#C6A468; --accent-ink:#D8BC87; --good:#6FAE7E;
+      --warn:#D6B25C; --poor:#D06B52; --phone-bg:#221E17; --chip:#2B261E;
+      --shadow:0 24px 60px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#171410; --panel:#1F1B15; --ink:#F0EBE0; --ink-soft:#A79E8D;
+    --line:#332E25; --accent:#C6A468; --accent-ink:#D8BC87; --good:#6FAE7E;
+    --warn:#D6B25C; --poor:#D06B52; --phone-bg:#221E17; --chip:#2B261E;
+    --shadow:0 24px 60px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --ground:#F5F2EC; --panel:#FDFBF7; --ink:#1B1812; --ink-soft:#5C564A;
+    --line:#E3DDD0; --accent:#A8874F; --accent-ink:#7C6234; --good:#3E7A4E;
+    --warn:#C79B3B; --poor:#B4452F; --phone-bg:#FBF9F4; --chip:#EEE9DF;
+    --shadow:0 24px 60px rgba(27,24,18,.14);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--ground); color:var(--ink);}
+  body{
+    font-family:"Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .label{
+    font-size:.66rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-soft); font-weight:600;
+  }
+
+  /* ---------- page shell ---------- */
+  header.page{
+    max-width:1280px; margin:0 auto; padding:40px 28px 8px;
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 24px;
+  }
+  header.page h1{
+    font-family:Didot,"Bodoni MT","Playfair Display",Georgia,serif;
+    font-weight:400; font-size:clamp(2rem,4.5vw,3rem); letter-spacing:.26em;
+    text-transform:uppercase;
+  }
+  header.page h1 b{color:var(--accent); font-weight:400;}
+  header.page .sub{color:var(--ink-soft); font-size:.9rem;}
+
+  .layout{
+    max-width:1280px; margin:0 auto; padding:24px 28px 80px;
+    display:grid; grid-template-columns:220px minmax(340px,470px) 1fr;
+    gap:32px; align-items:start;
+  }
+  @media (max-width:1020px){
+    .layout{grid-template-columns:1fr; justify-items:center;}
+    nav.rail{width:100%; max-width:470px; position:static;}
+    aside.notes{width:100%; max-width:470px;}
+  }
+
+  /* ---------- step rail ---------- */
+  nav.rail{position:sticky; top:24px; display:flex; flex-direction:column; gap:6px;}
+  nav.rail .label{margin-bottom:8px;}
+  .step{
+    display:flex; gap:12px; align-items:baseline; text-align:left;
+    background:none; border:1px solid transparent; border-radius:4px;
+    padding:10px 12px; cursor:pointer; color:var(--ink-soft);
+    font:inherit; font-size:.88rem; width:100%;
+    transition:background .15s,color .15s;
+  }
+  .step:hover{background:var(--panel); color:var(--ink);}
+  .step.active{background:var(--panel); border-color:var(--line); color:var(--ink); box-shadow:0 4px 14px rgba(27,24,18,.07);}
+  .step .no{
+    font-family:Didot,"Bodoni MT",Georgia,serif; font-size:.85rem;
+    color:var(--accent); min-width:1.6em;
+  }
+  .step.extra .no{color:var(--warn);}
+  .step:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  /* ---------- phone ---------- */
+  .stage{display:flex; flex-direction:column; align-items:center; gap:18px;}
+  .phone{
+    width:100%; max-width:400px; aspect-ratio:390/800;
+    background:var(--phone-bg); border:1px solid var(--line);
+    border-radius:36px; box-shadow:var(--shadow);
+    overflow:hidden; position:relative; display:flex; flex-direction:column;
+  }
+  .statusbar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 22px 6px; font-size:.7rem; color:var(--ink-soft);
+    letter-spacing:.05em; flex:0 0 auto;
+  }
+  .statusbar .brand{letter-spacing:.3em; font-family:Didot,"Bodoni MT",Georgia,serif; font-size:.8rem; color:var(--ink);}
+  .cartind{display:inline-flex; align-items:center; gap:5px; color:var(--ink); background:none; border:none; font:inherit; padding:0; cursor:pointer;}
+  .cartind svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+  .cartind b{
+    font-size:.62rem; font-weight:700; background:var(--accent); color:#FFF;
+    border-radius:999px; min-width:15px; height:15px; padding:0 4px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .toast{
+    position:absolute; left:50%; bottom:86px; z-index:5;
+    transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--ground);
+    font-size:.72rem; padding:9px 16px; border-radius:999px;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+    white-space:nowrap; max-width:88%; overflow:hidden; text-overflow:ellipsis;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---------- S8 bag & S9 checkout ---------- */
+  .cartlist{display:flex; flex-direction:column; gap:10px; padding:4px 22px;}
+  .cartitem{
+    display:flex; gap:12px; align-items:center;
+    border:1px solid var(--line); border-radius:8px; background:var(--panel); padding:10px;
+  }
+  .cartitem .imgbox{width:52px; height:62px; border-radius:6px; flex:0 0 52px;}
+  .cartitem .info{flex:1; min-width:0;}
+  .cartitem .info b{display:block; font-size:.78rem; font-weight:600;}
+  .cartitem .info span{font-size:.7rem; color:var(--ink-soft);}
+  .cartitem .price{font-size:.75rem; font-weight:600; white-space:nowrap;}
+  .cartitem .rm{background:none; border:none; color:var(--ink-soft); font-size:1.05rem; cursor:pointer; padding:4px 6px; line-height:1;}
+  .cartitem .rm:hover{color:var(--poor);}
+  .dot-c{display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:-1px; margin-right:5px; border:1px solid rgba(0,0,0,.15);}
+  .sumbox{
+    margin:12px 22px 0; border:1px solid var(--line); border-radius:8px;
+    background:var(--panel); padding:12px 14px; font-size:.78rem;
+  }
+  .sumrow{display:flex; justify-content:space-between; gap:12px; padding:3px 0; color:var(--ink-soft);}
+  .sumrow.total{color:var(--ink); font-weight:700; border-top:1px solid var(--line); margin-top:6px; padding-top:9px; font-size:.85rem;}
+  .emptybag{padding:34px 10px; text-align:center; color:var(--ink-soft); font-size:.8rem;}
+  .payopt{
+    display:flex; align-items:center; gap:12px; width:100%;
+    border:1px solid var(--line); border-radius:8px; background:var(--panel);
+    padding:13px 14px; cursor:pointer; font:inherit; color:var(--ink); text-align:left;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .payopt.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+  .payopt .ic{
+    width:36px; height:36px; border-radius:8px; background:var(--chip); flex:0 0 36px;
+    display:flex; align-items:center; justify-content:center; color:var(--accent-ink);
+  }
+  .payopt .ic svg{width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+  .payopt b{display:block; font-size:.8rem;}
+  .payopt span{font-size:.68rem; color:var(--ink-soft);}
+  .payopt .tick{margin-left:auto; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--line); flex:0 0 18px;}
+  .payopt.sel .tick{background:var(--accent); border-color:var(--accent); box-shadow:inset 0 0 0 3px var(--panel);}
+  .cardfields{display:none; flex-direction:column; gap:10px;}
+  .cardfields.show{display:flex;}
+  .done{display:none; flex-direction:column; align-items:center; gap:12px; text-align:center; padding:30px 22px;}
+  .done.show{display:flex;}
+  .done .big{
+    width:74px; height:74px; border-radius:50%;
+    background:color-mix(in srgb,var(--good) 15%,transparent); color:var(--good);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .done .big svg{width:34px; height:34px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+  .screen{display:none; flex-direction:column; flex:1 1 auto; min-height:0; overflow-y:auto;}
+  .screen.on{display:flex;}
+  .screen::-webkit-scrollbar{width:0;}
+  .pad{padding:0 22px;}
+
+  .bottomnav{
+    flex:0 0 auto; display:flex; border-top:1px solid var(--line);
+    background:var(--phone-bg); padding:10px 8px 16px;
+  }
+  .bottomnav button{
+    flex:1; background:none; border:none; font:inherit; font-size:.6rem;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft);
+    cursor:pointer; padding:6px 0; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .bottomnav button .dot{width:5px;height:5px;border-radius:50%;background:transparent;}
+  .bottomnav button.here{color:var(--ink); font-weight:600;}
+  .bottomnav button.here .dot{background:var(--accent);}
+
+  /* ---------- shared in-screen ---------- */
+  .h-screen{
+    font-family:Didot,"Bodoni MT","Playfair Display",Georgia,serif;
+    font-weight:400; font-size:1.5rem; line-height:1.2; text-wrap:balance;
+  }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--ink); color:var(--ground); border:1px solid var(--ink);
+    font:inherit; font-size:.72rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+    padding:14px 22px; border-radius:2px; cursor:pointer; width:100%;
+    transition:opacity .15s;
+  }
+  .btn:hover{opacity:.85;}
+  .btn.ghost{background:transparent; color:var(--ink);}
+  .btn.buy{background:var(--accent); border-color:var(--accent); color:#FFF;}
+  .btn:focus-visible,.chipbtn:focus-visible,.swatch:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .chiprow{display:flex; flex-wrap:wrap; gap:8px;}
+  .chipbtn{
+    background:var(--chip); border:1px solid transparent; border-radius:999px;
+    font:inherit; font-size:.72rem; padding:7px 14px; color:var(--ink-soft); cursor:pointer;
+    transition:all .15s;
+  }
+  .chipbtn.sel{background:var(--ink); color:var(--ground); border-color:var(--ink);}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:8px;}
+
+  /* photo boxes with graceful fallback */
+  .imgbox{
+    position:relative; overflow:hidden;
+    background:linear-gradient(140deg,#C9B896,#8A744E);
+  }
+  .imgbox img{width:100%; height:100%; object-fit:cover; display:block;}
+
+  /* ---------- S1 home ---------- */
+  .home-hero{
+    margin:10px 22px 0; border-radius:10px; overflow:hidden; position:relative;
+    color:#FBF7EE; min-height:210px; display:flex; align-items:flex-end;
+  }
+  .home-hero .bg{position:absolute; inset:0;}
+  .home-hero .bg img{width:100%; height:100%; object-fit:cover; display:block;}
+  .home-hero .veil{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg,rgba(27,24,18,.05) 20%,rgba(27,24,18,.72) 82%);
+  }
+  .home-hero .inner{position:relative; padding:22px 20px 20px; width:100%;}
+  .home-hero .label{color:#EFE5CF;}
+  .home-hero h2{font-family:Didot,"Bodoni MT",Georgia,serif; font-weight:400; font-size:1.6rem; line-height:1.15; margin:6px 0 14px; text-wrap:balance;}
+  .home-hero .btn{background:#FBF7EE; color:#3E321F; border-color:#FBF7EE; width:auto;}
+
+  .lookrow{display:flex; gap:12px; padding:4px 22px 8px; overflow-x:auto;}
+  .look{
+    flex:0 0 118px; border-radius:8px; overflow:hidden; border:1px solid var(--line);
+    background:var(--panel); font-size:.66rem; color:var(--ink-soft);
+  }
+  .look .imgbox{height:118px;}
+  .look p{padding:7px 9px 9px; line-height:1.3;}
+  .look p b{display:block; color:var(--ink); font-weight:600;}
+
+  /* ---------- S2 shop ---------- */
+  .prodgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:4px 22px 12px;}
+  .prod{
+    border:1px solid var(--line); border-radius:8px; background:var(--panel);
+    padding:0 0 10px; cursor:pointer; text-align:left; font:inherit; color:var(--ink);
+    overflow:hidden; transition:border-color .15s, box-shadow .15s;
+  }
+  .prod .imgbox{height:130px; margin-bottom:8px;}
+  .prod b{display:block; font-size:.76rem; font-weight:600; padding:0 10px;}
+  .prod span{font-size:.7rem; color:var(--ink-soft); padding:0 10px;}
+  .prod.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+  .acc-row{display:flex; gap:8px; padding:0 22px 6px; flex-wrap:wrap;}
+
+  /* ---------- S3 size ---------- */
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field input{
+    background:var(--panel); border:1px solid var(--line); border-radius:4px;
+    padding:11px 12px; font:inherit; font-size:.85rem; color:var(--ink); width:100%;
+  }
+  .field input:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  .fields2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .sizeResult{
+    border:1px solid var(--accent); border-radius:8px; padding:16px;
+    background:var(--panel); display:none; flex-direction:column; gap:8px;
+  }
+  .sizeResult.show{display:flex;}
+  .sizeLetters{display:flex; gap:10px; justify-content:center; margin:4px 0;}
+  .sizeLetters span{
+    width:46px; height:46px; border:1px solid var(--line); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:Didot,"Bodoni MT",Georgia,serif; font-size:1.1rem; color:var(--ink-soft);
+  }
+  .sizeLetters span.pick{background:var(--ink); color:var(--ground); border-color:var(--ink); transform:scale(1.12);}
+  .confbar{height:6px; border-radius:3px; background:var(--chip); overflow:hidden;}
+  .confbar i{display:block; height:100%; background:var(--good); width:0; transition:width .8s ease;}
+
+  /* ---------- S4 upload ---------- */
+  .upOpt{
+    display:flex; align-items:center; gap:14px; width:100%;
+    border:1px dashed var(--line); border-radius:8px; background:var(--panel);
+    padding:18px 16px; cursor:pointer; font:inherit; color:var(--ink); text-align:left;
+    transition:border-color .15s;
+  }
+  .upOpt:hover{border-color:var(--accent);}
+  .upOpt .ic{
+    width:42px; height:42px; border-radius:50%; background:var(--chip); flex:0 0 42px;
+    display:flex; align-items:center; justify-content:center; color:var(--accent-ink);
+  }
+  .upOpt .ic svg{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+  .upOpt b{display:block; font-size:.85rem;}
+  .upOpt span{font-size:.72rem; color:var(--ink-soft);}
+  .tips{font-size:.75rem; color:var(--ink-soft); display:flex; flex-direction:column; gap:6px;}
+  .tips li{list-style:none; padding-left:16px; position:relative;}
+  .tips li::before{content:""; position:absolute; left:0; top:.5em; width:6px; height:6px; border-radius:50%; background:var(--accent);}
+  .photoOk{display:none; flex-direction:column; gap:10px; align-items:center;}
+  .photoOk.show{display:flex;}
+
+  /* ---------- try-on stage with real model ---------- */
+  .fitstage{
+    margin:6px 22px 10px; border:1px solid var(--line); border-radius:10px;
+    display:flex; align-items:stretch; justify-content:center;
+    height:280px; position:relative; overflow:hidden; flex:0 0 auto;
+    background:linear-gradient(180deg,var(--panel),var(--chip));
+  }
+  .model{position:relative; width:100%; height:100%;}
+  .model > img{width:100%; height:100%; object-fit:cover; object-position:50% 12%; display:block;}
+  .garment{
+    position:absolute; left:50%; top:26%; transform:translateX(-50%);
+    width:88px; height:105px; transition:width .25s, height .25s, background .2s;
+    clip-path:polygon(18% 0,82% 0,92% 12%,80% 16%,86% 100%,14% 100%,20% 16%,8% 12%);
+    mix-blend-mode:multiply; opacity:.72;
+  }
+  .garment.dress{height:160px; clip-path:polygon(20% 0,80% 0,92% 10%,78% 14%,100% 100%,0 100%,22% 14%,8% 10%);}
+  .kp{position:absolute; width:8px; height:8px; border-radius:50%; background:#5EE08A; border:1.5px solid #FFF; box-shadow:0 0 6px rgba(0,0,0,.35);}
+  .acc-neck{position:absolute; left:50%; top:24%; transform:translateX(-50%); width:30px; height:15px; border:2.5px solid #E8C878; border-top:none; border-radius:0 0 16px 16px; display:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));}
+  .acc-bag{position:absolute; right:16%; top:52%; width:26px; height:30px; border-radius:4px; background:#6B4A2B; display:none; box-shadow:0 2px 6px rgba(0,0,0,.35);}
+  .acc-bag::before{content:""; position:absolute; left:4px; top:-9px; right:4px; height:11px; border:2.5px solid #6B4A2B; border-bottom:none; border-radius:9px 9px 0 0;}
+  .acc-sun{position:absolute; left:50%; top:9.5%; transform:translateX(-50%); width:30px; height:8px; border-radius:4px; background:#14110C; display:none; box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  .fitstage.wear-necklace .acc-neck{display:block;}
+  .fitstage.wear-bag .acc-bag{display:block;}
+  .fitstage.wear-sunglasses .acc-sun{display:block;}
+  .swatchrow{display:flex; gap:10px; padding:0 22px; align-items:center;}
+  .swatch{width:30px; height:30px; border-radius:50%; border:2px solid var(--line); cursor:pointer; padding:0;}
+  .swatch.sel{border-color:var(--ink); transform:scale(1.12);}
+  .sizetoggle{display:flex; gap:8px;}
+  .sizetoggle .chipbtn{min-width:44px; text-align:center;}
+
+  /* ---------- S6 results ---------- */
+  .gauge{position:relative; width:170px; height:96px; margin:6px auto 0; overflow:hidden;}
+  .gauge .arcbg,.gauge .arcfill{
+    position:absolute; inset:0 0 -96px 0; border-radius:50%;
+    border:14px solid var(--chip);
+  }
+  .gauge .arcfill{
+    border-color:var(--good); clip-path:polygon(0 0,0 100%,50% 100%,50% 0);
+    transform:rotate(0deg); transform-origin:50% 50%; transition:transform 1s ease;
+  }
+  .gauge .num{
+    position:absolute; left:0; right:0; bottom:2px; text-align:center;
+    font-family:Didot,"Bodoni MT",Georgia,serif; font-size:1.9rem;
+  }
+  .verdict{
+    text-align:center; font-size:.72rem; letter-spacing:.2em; text-transform:uppercase;
+    font-weight:700; padding:6px 0;
+  }
+  .zones{display:flex; flex-direction:column; gap:8px; padding:0 22px;}
+  .zone{
+    display:flex; align-items:center; justify-content:space-between;
+    border:1px solid var(--line); border-radius:6px; background:var(--panel);
+    padding:9px 12px; font-size:.78rem;
+  }
+  .pill{font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; padding:4px 10px; border-radius:999px;}
+  .pill.good{background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good);}
+  .pill.warn{background:color-mix(in srgb,var(--warn) 20%,transparent); color:var(--warn);}
+  .pill.poor{background:color-mix(in srgb,var(--poor) 16%,transparent); color:var(--poor);}
+  .final{
+    margin:0 22px; border:1px solid var(--accent); border-radius:8px; background:var(--panel);
+    padding:14px 16px; font-size:.8rem;
+  }
+  .final b{font-family:Didot,"Bodoni MT",Georgia,serif; font-size:1.05rem; font-weight:400;}
+  .row2{display:flex; gap:10px; padding:0 22px;}
+  .row2 .btn{flex:1;}
+
+  /* ---------- S7 stylist ---------- */
+  .chat{display:flex; flex-direction:column; gap:10px; padding:4px 22px;}
+  .bubble{max-width:82%; border-radius:12px; padding:10px 13px; font-size:.78rem; line-height:1.45;}
+  .bubble.ai{background:var(--panel); border:1px solid var(--line); border-bottom-left-radius:3px; align-self:flex-start;}
+  .bubble.me{background:var(--ink); color:var(--ground); border-bottom-right-radius:3px; align-self:flex-end;}
+  .suggest{display:flex; gap:10px; padding:0 22px; overflow-x:auto;}
+
+  /* ---------- annotations ---------- */
+  aside.notes{position:sticky; top:24px; display:flex; flex-direction:column; gap:14px;}
+  .note{display:none; flex-direction:column; gap:12px;}
+  .note.on{display:flex;}
+  .note h3{font-family:Didot,"Bodoni MT","Playfair Display",Georgia,serif; font-weight:400; font-size:1.35rem;}
+  .note .card{padding:14px 16px; font-size:.82rem; color:var(--ink-soft); line-height:1.55;}
+  .note .card b{color:var(--ink); font-weight:600; display:block; margin-bottom:3px; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;}
+  .note ul{padding-left:18px; display:flex; flex-direction:column; gap:4px;}
+  .flowhint{font-size:.75rem; color:var(--ink-soft);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>MI<b>R</b>A</h1>
+  <div class="sub">Your virtual mirror — try-on &amp; smart sizing · interactive design prototype · MVP concept, July 2026</div>
+</header>
+
+<div class="layout">
+
+  <!-- ======= STEP RAIL ======= -->
+  <nav class="rail" aria-label="Prototype screens">
+    <div class="label">User journey</div>
+    <button class="step active" data-s="1"><span class="no">01</span>Home</button>
+    <button class="step" data-s="2"><span class="no">02</span>Clothing &amp; accessories</button>
+    <button class="step" data-s="3"><span class="no">03</span>Size &amp; style profile</button>
+    <button class="step" data-s="4"><span class="no">04</span>Upload photo</button>
+    <button class="step" data-s="5"><span class="no">05</span>Virtual try-on</button>
+    <button class="step" data-s="6"><span class="no">06</span>Fit results</button>
+    <button class="step" data-s="8"><span class="no">07</span>Your bag</button>
+    <button class="step" data-s="9"><span class="no">08</span>Checkout &amp; payment</button>
+    <button class="step extra" data-s="7"><span class="no">✦</span>AI Stylist <span style="font-size:.62rem;">(extra)</span></button>
+  </nav>
+
+  <!-- ======= PHONE ======= -->
+  <div class="stage">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="brand">MIRA</span><button class="cartind" onclick="go(8)" title="View bag" aria-label="View bag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1.2 12H7.2L6 8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><b id="cartCount">0</b></button></div>
+
+      <!-- S1 HOME -->
+      <section class="screen on" id="s1">
+        <div class="home-hero">
+          <div class="bg imgbox"><img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=60" alt="Woman shopping in the city" onerror="this.style.display='none'"></div>
+          <div class="veil"></div>
+          <div class="inner">
+            <div class="label">New · AI fitting room</div>
+            <h2>See it on you, before you buy it.</h2>
+            <button class="btn" onclick="go(3)">Start try-on</button>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:18px;">
+          <div class="label">Shop by category</div>
+          <div class="chiprow" style="margin-top:8px;">
+            <button class="chipbtn sel" onclick="go(2)">Dresses</button>
+            <button class="chipbtn" onclick="go(2)">Tops</button>
+            <button class="chipbtn" onclick="go(2)">Outerwear</button>
+            <button class="chipbtn" onclick="go(2)">Accessories</button>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:18px;"><div class="label">Trending this week</div></div>
+        <div class="lookrow" style="margin-top:8px;">
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=300&q=60" alt="Wrap dresses on a rail" onerror="this.style.display='none'"></div><p><b>Linen wrap dress</b>LKR 6,900</p></div>
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=300&q=60" alt="Soft knit blouse" onerror="this.style.display='none'"></div><p><b>Moss silk blouse</b>LKR 4,200</p></div>
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=300&q=60" alt="Elegant evening dress" onerror="this.style.display='none'"></div><p><b>Evening column</b>LKR 9,800</p></div>
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=300&q=60" alt="Folded knit tops" onerror="this.style.display='none'"></div><p><b>Clay knit top</b>LKR 3,600</p></div>
+        </div>
+        <div class="pad" style="margin-top:14px; margin-bottom:16px;">
+          <div class="card" style="padding:13px 15px; font-size:.76rem; color:var(--ink-soft);">
+            <b style="color:var(--ink); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase;">✦ Style assistant</b>
+            Not sure what suits you? Ask the AI stylist for looks matched to your body shape and occasion. <a style="color:var(--accent-ink); cursor:pointer; text-decoration:underline;" onclick="go(7)">Open stylist</a>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+      </section>
+
+      <!-- S2 SHOP -->
+      <section class="screen" id="s2">
+        <div class="pad" style="padding-top:8px;">
+          <div class="h-screen">Choose your piece</div>
+          <div class="chiprow" style="margin:12px 0 4px;">
+            <button class="chipbtn sel">All</button>
+            <button class="chipbtn">Dresses</button>
+            <button class="chipbtn">Tops</button>
+            <button class="chipbtn">Formal</button>
+          </div>
+        </div>
+        <div class="prodgrid" id="prodgrid"></div>
+        <div class="pad"><div class="label" style="margin-bottom:8px;">Add accessories</div></div>
+        <div class="acc-row" id="accrow">
+          <button class="chipbtn" data-acc="necklace">＋ Necklace</button>
+          <button class="chipbtn" data-acc="bag">＋ Handbag</button>
+          <button class="chipbtn" data-acc="sunglasses">＋ Sunglasses</button>
+        </div>
+        <div class="pad" style="margin:14px 0 0;">
+          <button class="btn" onclick="go(3)">Try this on →</button>
+        </div>
+        <div class="row2" style="margin:10px 0 16px;">
+          <button class="btn ghost" onclick="addCart()">＋ Add to cart</button>
+          <button class="btn buy" onclick="buyNow()">Buy now</button>
+        </div>
+      </section>
+
+      <!-- S3 SIZE -->
+      <section class="screen" id="s3">
+        <div class="pad" style="padding-top:8px; display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div class="h-screen">Your measurements</div>
+            <p style="font-size:.78rem; color:var(--ink-soft); margin-top:4px;">We use these once to recommend your size. Never shared.</p>
+          </div>
+          <div class="fields2">
+            <div class="field"><span class="label">Height (cm)</span><input id="mH" type="number" value="165" inputmode="numeric"></div>
+            <div class="field"><span class="label">Weight (kg)</span><input id="mW" type="number" value="58" inputmode="numeric"></div>
+            <div class="field"><span class="label">Bust / chest (cm)</span><input id="mB" type="number" value="88" inputmode="numeric"></div>
+            <div class="field"><span class="label">Waist (cm)</span><input id="mWa" type="number" value="70" inputmode="numeric"></div>
+            <div class="field"><span class="label">Hips (cm)</span><input id="mHp" type="number" value="94" inputmode="numeric"></div>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:8px;">Preferred fit</div>
+            <div class="chiprow" id="fitpref">
+              <button class="chipbtn" data-v="slim">Slim</button>
+              <button class="chipbtn sel" data-v="regular">Regular</button>
+              <button class="chipbtn" data-v="oversized">Oversized</button>
+            </div>
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:8px;">Fashion style</div>
+            <div class="chiprow" id="stylepref">
+              <button class="chipbtn sel">Minimal</button>
+              <button class="chipbtn">Casual</button>
+              <button class="chipbtn">Office</button>
+              <button class="chipbtn">Streetwear</button>
+              <button class="chipbtn">Evening</button>
+            </div>
+          </div>
+          <button class="btn" onclick="computeSize()">Get my size</button>
+          <div class="sizeResult" id="sizeResult">
+            <div class="label">Recommended size</div>
+            <div class="sizeLetters">
+              <span data-sz="S">S</span><span data-sz="M">M</span><span data-sz="L">L</span>
+            </div>
+            <div style="font-size:.76rem; color:var(--ink-soft);" id="sizeWhy"></div>
+            <div class="confbar"><i id="confFill"></i></div>
+            <div style="font-size:.7rem; color:var(--ink-soft);" id="confTxt"></div>
+            <button class="btn" style="margin-top:6px;" onclick="go(4)">Continue → upload photo</button>
+          </div>
+          <div style="height:14px;"></div>
+        </div>
+      </section>
+
+      <!-- S4 UPLOAD -->
+      <section class="screen" id="s4">
+        <div class="pad" style="padding-top:8px; display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div class="h-screen">Add your photo</div>
+            <p style="font-size:.78rem; color:var(--ink-soft); margin-top:4px;">A full-body photo lets us drape the garment on you.</p>
+          </div>
+          <button class="upOpt" onclick="photoChosen('camera')">
+            <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
+            <span><b>Take a photo</b><span>Use your camera with on-screen pose guide</span></span>
+          </button>
+          <button class="upOpt" onclick="photoChosen('gallery')">
+            <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M3.5 18.5 9.5 13l3.5 3 3.5-3.5 4 4"/></svg></span>
+            <span><b>Choose from gallery</b><span>Pick an existing full-body photo</span></span>
+          </button>
+          <div>
+            <div class="label" style="margin-bottom:8px;">For best results</div>
+            <ul class="tips">
+              <li>Stand facing the camera, arms slightly apart</li>
+              <li>Plain background, good lighting</li>
+              <li>Fitted clothing photographs best</li>
+              <li>Your photo is processed securely and deleted after 24 h</li>
+            </ul>
+          </div>
+          <div class="photoOk" id="photoOk">
+            <div class="fitstage" style="margin:0; width:100%; height:230px;">
+              <div class="model">
+                <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=500&q=60" alt="Full-body photo detected" onerror="this.style.display='none'">
+                <span class="kp" style="left:49%; top:10%;"></span>
+                <span class="kp" style="left:38%; top:24%;"></span>
+                <span class="kp" style="left:60%; top:24%;"></span>
+                <span class="kp" style="left:49%; top:38%;"></span>
+                <span class="kp" style="left:42%; top:52%;"></span>
+                <span class="kp" style="left:56%; top:52%;"></span>
+                <span class="kp" style="left:43%; top:78%;"></span>
+                <span class="kp" style="left:55%; top:78%;"></span>
+              </div>
+            </div>
+            <div style="font-size:.75rem; color:var(--good); font-weight:600;">✓ Body detected — 14 key points mapped</div>
+            <button class="btn" onclick="go(5)">Start virtual try-on</button>
+          </div>
+          <div style="height:14px;"></div>
+        </div>
+      </section>
+
+      <!-- S5 TRY-ON -->
+      <section class="screen" id="s5">
+        <div class="pad" style="padding-top:8px;">
+          <div class="h-screen">Virtual try-on</div>
+          <div style="font-size:.74rem; color:var(--ink-soft); margin-top:2px;" id="tryonSub">Linen wrap dress · size M</div>
+        </div>
+        <div class="fitstage" id="fitstage" style="margin-top:10px;">
+          <div class="model">
+            <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=500&q=60" alt="Your photo with garment draped on" onerror="this.style.display='none'">
+            <div class="garment dress" id="garment" style="background:#8A6A47;"></div>
+            <div class="acc-neck"></div><div class="acc-bag"></div><div class="acc-sun"></div>
+          </div>
+        </div>
+        <div class="swatchrow">
+          <span class="label" style="margin-right:2px;">Colour</span>
+          <button class="swatch sel" style="background:#8A6A47;" data-c="#8A6A47" aria-label="Tan"></button>
+          <button class="swatch" style="background:#4A5A48;" data-c="#4A5A48" aria-label="Moss"></button>
+          <button class="swatch" style="background:#3A352C;" data-c="#3A352C" aria-label="Charcoal"></button>
+          <button class="swatch" style="background:#AA5A41;" data-c="#AA5A41" aria-label="Clay"></button>
+        </div>
+        <div class="pad" style="margin-top:12px; display:flex; align-items:center; justify-content:space-between;">
+          <span class="label">Try size</span>
+          <div class="sizetoggle" id="trySize">
+            <button class="chipbtn" data-sz="S">S</button>
+            <button class="chipbtn sel" data-sz="M">M</button>
+            <button class="chipbtn" data-sz="L">L</button>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:10px;">
+          <div class="label" style="margin-bottom:8px;">Accessories</div>
+          <div class="chiprow" id="accrow2">
+            <button class="chipbtn" data-acc="necklace">Necklace</button>
+            <button class="chipbtn" data-acc="bag">Handbag</button>
+            <button class="chipbtn" data-acc="sunglasses">Sunglasses</button>
+          </div>
+        </div>
+        <div class="pad" style="margin:14px 0 0;">
+          <button class="btn" onclick="go(6)">Analyze my fit →</button>
+        </div>
+        <div class="row2" style="margin:10px 0 16px;">
+          <button class="btn ghost" onclick="addCart()">＋ Add to cart</button>
+          <button class="btn buy" onclick="buyNow()">Buy now</button>
+        </div>
+      </section>
+
+      <!-- S6 RESULTS -->
+      <section class="screen" id="s6">
+        <div class="pad" style="padding-top:8px;">
+          <div class="h-screen">Fit analysis</div>
+        </div>
+        <div class="gauge">
+          <div class="arcbg"></div>
+          <div class="arcfill" id="arcfill"></div>
+          <div class="num" id="scoreNum">–</div>
+        </div>
+        <div class="verdict" id="verdict"></div>
+        <div class="zones" id="zones"></div>
+        <div class="final" id="finalRec" style="margin-top:12px;"></div>
+        <div class="row2" style="margin:12px 0 0;">
+          <button class="btn ghost" onclick="addCart()">＋ Add to cart</button>
+          <button class="btn buy" onclick="buyNow()" id="buyBtn">Buy now</button>
+        </div>
+        <div class="row2" style="margin:10px 0 6px;">
+          <button class="btn ghost" onclick="go(5)">Adjust</button>
+          <button class="btn ghost">Save look</button>
+        </div>
+        <div class="pad" style="margin-bottom:16px;">
+          <button class="btn" style="background:var(--accent); border-color:var(--accent); color:#FFF;">Share my look ↗</button>
+        </div>
+      </section>
+
+      <!-- S8 BAG -->
+      <section class="screen" id="s8">
+        <div class="pad" style="padding-top:8px; display:flex; align-items:baseline; justify-content:space-between;">
+          <div class="h-screen">Your bag</div>
+          <span class="label" id="bagCountLbl"></span>
+        </div>
+        <div class="cartlist" id="cartList" style="margin-top:10px;"></div>
+        <div id="bagSummary"></div>
+        <div class="pad" style="margin:14px 0 0;">
+          <button class="btn buy" id="toCheckout" onclick="go(9)">Checkout →</button>
+        </div>
+        <div class="pad" style="margin:10px 0 16px;">
+          <button class="btn ghost" onclick="go(2)">Continue shopping</button>
+        </div>
+      </section>
+
+      <!-- S9 CHECKOUT -->
+      <section class="screen" id="s9">
+        <div id="coForm" style="display:flex; flex-direction:column;">
+          <div class="pad" style="padding-top:8px;">
+            <div class="h-screen">Checkout</div>
+          </div>
+          <div class="pad" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+            <div class="label">Delivery details</div>
+            <div class="field"><input type="text" value="Amaya Perera" aria-label="Full name"></div>
+            <div class="fields2">
+              <div class="field"><input type="tel" value="+94 77 123 4567" aria-label="Phone"></div>
+              <div class="field"><input type="text" value="Colombo 05" aria-label="City"></div>
+            </div>
+            <div class="field"><input type="text" value="24, Flower Road" aria-label="Address"></div>
+          </div>
+          <div class="pad" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
+            <div class="label">Payment method</div>
+            <button class="payopt sel" data-pay="card">
+              <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M6.5 14.5h4"/></svg></span>
+              <span><b>Debit / credit card</b><span>Visa · Mastercard — secured by gateway</span></span>
+              <span class="tick"></span>
+            </button>
+            <div class="cardfields show" id="cardFields">
+              <div class="field"><input type="text" value="4242 4242 4242 4242" aria-label="Card number"></div>
+              <div class="fields2">
+                <div class="field"><input type="text" value="09 / 28" aria-label="Expiry date"></div>
+                <div class="field"><input type="password" value="123" aria-label="CVV"></div>
+              </div>
+            </div>
+            <button class="payopt" data-pay="wallet">
+              <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10.5 18.5h3"/></svg></span>
+              <span><b>Mobile wallet</b><span>eZ Cash · FriMi · Genie</span></span>
+              <span class="tick"></span>
+            </button>
+            <button class="payopt" data-pay="cod">
+              <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="1.5"/><circle cx="12" cy="12" r="2.8"/><path d="M5.8 9.2h.01M18.2 14.8h.01"/></svg></span>
+              <span><b>Cash on delivery</b><span>Pay when your order arrives</span></span>
+              <span class="tick"></span>
+            </button>
+          </div>
+          <div class="sumbox" id="coSummary" style="margin-top:14px;"></div>
+          <div class="pad" style="margin:14px 0 16px;">
+            <button class="btn buy" id="placeBtn" onclick="placeOrder()">Place order</button>
+          </div>
+        </div>
+        <div class="done" id="coDone">
+          <div class="big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 10 18 20 6"/></svg></div>
+          <div class="h-screen">Order confirmed!</div>
+          <p style="font-size:.78rem; color:var(--ink-soft);">Order <b id="orderNo" style="color:var(--ink);"></b> · estimated delivery 2–3 days.<br>A confirmation has been sent to your email.</p>
+          <div style="width:100%; display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+            <button class="btn ghost">Track my order</button>
+            <button class="btn" onclick="go(1)">Back to home</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- S7 STYLIST -->
+      <section class="screen" id="s7">
+        <div class="pad" style="padding-top:8px;">
+          <div class="h-screen">AI Stylist <span style="font-size:.8rem; color:var(--accent-ink);">✦ extra</span></div>
+        </div>
+        <div class="chat" style="margin-top:12px;">
+          <div class="bubble me">I have a garden wedding in August. What should I wear?</div>
+          <div class="bubble ai">Lovely! With your <b>hourglass profile</b> and preference for <b>minimal</b> style, I'd suggest a midi wrap dress in warm tones — it flatters your waist and photographs beautifully outdoors. Here are three from our try-on catalogue:</div>
+        </div>
+        <div class="suggest" style="margin-top:10px;">
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=300&q=60" alt="Wrap dress" onerror="this.style.display='none'"></div><p><b>Linen wrap dress</b>96% style match</p></div>
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=300&q=60" alt="Warm-tone midi outfit" onerror="this.style.display='none'"></div><p><b>Clay midi</b>91% style match</p></div>
+          <div class="look"><div class="imgbox"><img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=300&q=60" alt="Knit slip dress" onerror="this.style.display='none'"></div><p><b>Moss slip dress</b>88% style match</p></div>
+        </div>
+        <div class="pad" style="margin-top:12px;">
+          <button class="btn" onclick="go(5)">Try the top match on →</button>
+        </div>
+        <div class="pad" style="margin:12px 0 16px;">
+          <div class="card" style="padding:12px 14px; font-size:.74rem; color:var(--ink-soft);">
+            Also included as extras: <b style="color:var(--ink);">saved wardrobe</b>, <b style="color:var(--ink);">share-your-look social cards</b>, and <b style="color:var(--ink);">fit-history</b> so recommendations improve over time.
+          </div>
+        </div>
+      </section>
+
+      <div class="toast" id="toast" role="status"></div>
+
+      <!-- bottom nav -->
+      <div class="bottomnav" id="bnav">
+        <button data-s="1"><span class="dot"></span>Home</button>
+        <button data-s="2"><span class="dot"></span>Shop</button>
+        <button data-s="5"><span class="dot"></span>Try-on</button>
+        <button data-s="8"><span class="dot"></span>Bag</button>
+        <button data-s="7"><span class="dot"></span>Stylist</button>
+      </div>
+    </div>
+    <div class="flowhint">Prototype is clickable — follow the buttons, or jump between screens from the rail. Photos need an internet connection (Unsplash).</div>
+  </div>
+
+  <!-- ======= ANNOTATIONS ======= -->
+  <aside class="notes">
+    <div class="label">Design rationale</div>
+
+    <div class="note on" data-s="1">
+      <h3>01 · Home</h3>
+      <div class="card"><b>Purpose</b>First impression sells the core promise — "see it on you, before you buy it" — with a single dominant call to action.</div>
+      <div class="card"><b>Key features</b><ul><li>Hero CTA straight into the try-on journey</li><li>Category chips &amp; trending looks for browsing</li><li>AI Stylist entry point (differentiator)</li></ul></div>
+      <div class="card"><b>Marketing angle</b>Reduces purchase anxiety — the #1 driver of fashion e-commerce returns (~30% industry average). The hero speaks benefit, not feature.</div>
+    </div>
+
+    <div class="note" data-s="2">
+      <h3>02 · Clothing &amp; accessories</h3>
+      <div class="card"><b>Purpose</b>Lightweight catalogue where users pick a garment and layer accessories before trying on. Tap a card to select it.</div>
+      <div class="card"><b>Key features</b><ul><li>Filterable product grid with prices</li><li>Accessory add-ons (necklace, bag, sunglasses) that carry into the try-on</li><li>Add to cart &amp; Buy now with live bag counter</li><li>Selected state clearly marked</li></ul></div>
+      <div class="card"><b>Marketing angle</b>Accessory layering raises average order value through cross-selling at the moment of highest engagement.</div>
+    </div>
+
+    <div class="note" data-s="3">
+      <h3>03 · Size &amp; style profile</h3>
+      <div class="card"><b>Purpose</b>Collect five measurements once, then recommend S / M / L with a confidence score. Try changing the numbers — the recommendation is computed live.</div>
+      <div class="card"><b>Key features</b><ul><li>Height, weight, bust, waist, hips</li><li>Fit preference (slim / regular / oversized) shifts the recommendation</li><li>Fashion-style tags feed the AI stylist</li><li>Clear privacy note builds trust</li></ul></div>
+      <div class="card"><b>Marketing angle</b>First-party data capture: measurements + style preference are high-value segmentation data for personalised campaigns.</div>
+    </div>
+
+    <div class="note" data-s="4">
+      <h3>04 · Upload photo</h3>
+      <div class="card"><b>Purpose</b>Two clear paths — camera or gallery — with guidance that maximises try-on quality. Tap either option to simulate a successful upload.</div>
+      <div class="card"><b>Key features</b><ul><li>Camera with pose guide / gallery picker</li><li>Photo quality tips</li><li>Body detection confirmation with mapped key points</li><li>24-hour auto-deletion promise</li></ul></div>
+      <div class="card"><b>Marketing angle</b>The privacy promise is a trust signal — surveys show data concern is the top barrier to virtual try-on adoption.</div>
+    </div>
+
+    <div class="note" data-s="5">
+      <h3>05 · Virtual try-on</h3>
+      <div class="card"><b>Purpose</b>The hero moment: garment draped on the user's photo. Swap colours, sizes and accessories in real time — try them here.</div>
+      <div class="card"><b>Key features</b><ul><li>Live garment overlay on the detected body</li><li>Colour swatches &amp; S/M/L toggle (watch the drape change)</li><li>Accessories toggle on/off</li></ul></div>
+      <div class="card"><b>Marketing angle</b>Interactive product experience lengthens session time and is inherently shareable — the engine of organic social reach.</div>
+    </div>
+
+    <div class="note" data-s="6">
+      <h3>06 · Fit results</h3>
+      <div class="card"><b>Purpose</b>An honest verdict: fit score, per-zone breakdown, and a final size recommendation. Try size L or S on screen 05, then re-analyze — the score reacts.</div>
+      <div class="card"><b>Key features</b><ul><li>Fit score gauge (poor → highly fit)</li><li>Zone chips: shoulders, bust, waist, hips</li><li>Final size recommendation with reasoning</li><li>Add to cart &amp; Buy now (price shown) right at the moment of conviction</li><li>Save &amp; share actions</li></ul></div>
+      <div class="card"><b>Marketing angle</b>Honest fit scoring cuts returns and builds brand trust; the shareable result card turns every customer into media.</div>
+    </div>
+
+    <div class="note" data-s="8">
+      <h3>07 · Your bag</h3>
+      <div class="card"><b>Purpose</b>A persistent bag that collects looks from anywhere in the journey — shop, try-on, or fit results. Open it any time from the bag icon or bottom nav.</div>
+      <div class="card"><b>Key features</b><ul><li>Item cards with photo, chosen size &amp; colour</li><li>Remove items, live subtotal + delivery fee</li><li>Empty state nudges back to shopping</li></ul></div>
+      <div class="card"><b>Marketing angle</b>The bag is a remarketing surface — abandoned-bag reminders are among the highest-ROI emails in fashion e-commerce (~40% open rates).</div>
+    </div>
+
+    <div class="note" data-s="9">
+      <h3>08 · Checkout &amp; payment</h3>
+      <div class="card"><b>Purpose</b>A single-screen, low-friction checkout: delivery details, payment choice, order summary, one tap to confirm.</div>
+      <div class="card"><b>Key features</b><ul><li>Card, mobile wallet, and cash-on-delivery options</li><li>Order summary with per-item pricing and delivery fee</li><li>Instant confirmation screen with order number &amp; tracking</li></ul></div>
+      <div class="card"><b>Marketing angle</b>~70% of fashion carts are abandoned at checkout; offering cash-on-delivery and local wallets (key for the Sri Lankan market) directly attacks the top abandonment reasons.</div>
+    </div>
+
+    <div class="note" data-s="7">
+      <h3>✦ AI Stylist (extra)</h3>
+      <div class="card"><b>Purpose</b>Differentiator beyond the brief: conversational styling matched to body shape, occasion and declared style tags.</div>
+      <div class="card"><b>Key features</b><ul><li>Occasion-based outfit suggestions with style-match %</li><li>One tap from suggestion to try-on</li><li>Wardrobe, fit history &amp; social share cards as further extras</li></ul></div>
+      <div class="card"><b>Marketing angle</b>Personalisation at scale — the stylist creates repeat visits (retention) rather than one-off try-ons, and its suggestions are a native ad surface for partner brands.</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  var state = {
+    product:{name:"Linen wrap dress", type:"dress", color:"#8A6A47", price:"LKR 6,900",
+             img:"https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=60"},
+    recommended:"M", trySize:"M", fitPref:"regular",
+    acc:{necklace:false, bag:false, sunglasses:false},
+    conf:0, cart:[]
+  };
+  var DELIV=350;
+  function priceNum(s){return +String(s).replace(/\D/g,"");}
+  function fmt(n){return "LKR "+n.toLocaleString("en-US");}
+
+  /* bag & checkout */
+  var toastTimer=null;
+  function toast(msg){
+    var t=document.getElementById("toast");
+    t.textContent=msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){t.classList.remove("show");}, 2200);
+  }
+  function updateCount(){document.getElementById("cartCount").textContent=state.cart.length;}
+  function currentItem(){
+    return {name:state.product.name, size:state.trySize, color:state.product.color,
+            img:state.product.img, priceN:priceNum(state.product.price)};
+  }
+  window.addCart=function(){
+    state.cart.push(currentItem());
+    updateCount();
+    toast("Added to bag — "+state.product.name+" · size "+state.trySize);
+  };
+  window.buyNow=function(){ go(9); };
+
+  function renderCart(){
+    var list=document.getElementById("cartList"),
+        sum=document.getElementById("bagSummary"),
+        lbl=document.getElementById("bagCountLbl"),
+        co=document.getElementById("toCheckout");
+    if(!state.cart.length){
+      list.innerHTML='<div class="emptybag">Your bag is empty.<br>Looks you add from the shop, try-on or fit results appear here.</div>';
+      sum.innerHTML=""; co.style.display="none"; lbl.textContent="0 items";
+      return;
+    }
+    co.style.display="";
+    lbl.textContent=state.cart.length+(state.cart.length===1?" item":" items");
+    list.innerHTML=state.cart.map(function(it,i){
+      return '<div class="cartitem">'+
+        '<div class="imgbox"><img src="'+it.img+'" alt="'+it.name+'" onerror="this.style.display=\'none\'"></div>'+
+        '<div class="info"><b>'+it.name+'</b><span><i class="dot-c" style="background:'+it.color+';"></i>Size '+it.size+'</span></div>'+
+        '<span class="price">'+fmt(it.priceN)+'</span>'+
+        '<button class="rm" aria-label="Remove item" data-i="'+i+'">×</button></div>';
+    }).join("");
+    list.querySelectorAll(".rm").forEach(function(b){
+      b.addEventListener("click",function(){
+        state.cart.splice(+b.dataset.i,1);
+        updateCount(); renderCart();
+      });
+    });
+    var sub=state.cart.reduce(function(a,it){return a+it.priceN;},0);
+    sum.innerHTML='<div class="sumbox">'+
+      '<div class="sumrow"><span>Subtotal</span><span>'+fmt(sub)+'</span></div>'+
+      '<div class="sumrow"><span>Delivery</span><span>'+fmt(DELIV)+'</span></div>'+
+      '<div class="sumrow total"><span>Total</span><span>'+fmt(sub+DELIV)+'</span></div></div>';
+  }
+
+  function orderItems(){ return state.cart.length ? state.cart : [currentItem()]; }
+  function renderCheckout(){
+    document.getElementById("coDone").classList.remove("show");
+    document.getElementById("coForm").style.display="flex";
+    var items=orderItems();
+    var sub=items.reduce(function(a,it){return a+it.priceN;},0);
+    document.getElementById("coSummary").innerHTML=
+      '<div class="label" style="margin-bottom:6px;">Order summary</div>'+
+      items.map(function(it){
+        return '<div class="sumrow"><span>'+it.name+' · '+it.size+'</span><span>'+fmt(it.priceN)+'</span></div>';
+      }).join("")+
+      '<div class="sumrow"><span>Delivery</span><span>'+fmt(DELIV)+'</span></div>'+
+      '<div class="sumrow total"><span>Total</span><span>'+fmt(sub+DELIV)+'</span></div>';
+    document.getElementById("placeBtn").textContent="Place order · "+fmt(sub+DELIV);
+  }
+
+  document.querySelectorAll(".payopt").forEach(function(p){
+    p.addEventListener("click",function(){
+      document.querySelectorAll(".payopt").forEach(function(x){x.classList.remove("sel");});
+      p.classList.add("sel");
+      document.getElementById("cardFields").classList.toggle("show", p.dataset.pay==="card");
+    });
+  });
+
+  window.placeOrder=function(){
+    document.getElementById("coForm").style.display="none";
+    document.getElementById("coDone").classList.add("show");
+    document.getElementById("orderNo").textContent="#MIRA-"+Math.floor(1000+Math.random()*9000);
+    state.cart=[]; updateCount();
+  };
+
+  /* navigation */
+  window.go = function(n){
+    document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on");});
+    document.getElementById("s"+n).classList.add("on");
+    document.querySelectorAll(".step").forEach(function(b){b.classList.toggle("active", b.dataset.s==String(n));});
+    document.querySelectorAll(".note").forEach(function(no){no.classList.toggle("on", no.dataset.s==String(n));});
+    document.querySelectorAll("#bnav button").forEach(function(b){b.classList.toggle("here", b.dataset.s==String(n));});
+    if(n==6) renderResults();
+    if(n==8) renderCart();
+    if(n==9) renderCheckout();
+  };
+  document.querySelectorAll(".step").forEach(function(b){b.addEventListener("click",function(){go(b.dataset.s);});});
+  document.querySelectorAll("#bnav button").forEach(function(b){b.addEventListener("click",function(){go(b.dataset.s);});});
+  document.querySelectorAll("#bnav button")[0].classList.add("here");
+
+  /* products */
+  var products=[
+    {name:"Linen wrap dress", price:"LKR 6,900", type:"dress", color:"#8A6A47",
+     img:"https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=60"},
+    {name:"Moss silk blouse", price:"LKR 4,200", type:"top", color:"#4A5A48",
+     img:"https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=400&q=60"},
+    {name:"Evening column", price:"LKR 9,800", type:"dress", color:"#3A352C",
+     img:"https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=400&q=60"},
+    {name:"Clay knit top", price:"LKR 3,600", type:"top", color:"#AA5A41",
+     img:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=60"}
+  ];
+  var grid=document.getElementById("prodgrid");
+  products.forEach(function(p,i){
+    var el=document.createElement("button");
+    el.className="prod"+(i===0?" sel":"");
+    el.innerHTML='<div class="imgbox"><img src="'+p.img+'" alt="'+p.name+'" onerror="this.style.display=\'none\'"></div>'+
+      "<b>"+p.name+"</b><span>"+p.price+"</span>";
+    el.addEventListener("click",function(){
+      grid.querySelectorAll(".prod").forEach(function(x){x.classList.remove("sel");});
+      el.classList.add("sel");
+      state.product={name:p.name, type:p.type, color:p.color, price:p.price, img:p.img};
+      syncTryOn();
+    });
+    grid.appendChild(el);
+  });
+
+  /* accessory toggles (both rows stay in sync) */
+  function bindAcc(rowId){
+    document.querySelectorAll("#"+rowId+" [data-acc]").forEach(function(b){
+      b.addEventListener("click",function(){
+        var k=b.dataset.acc;
+        state.acc[k]=!state.acc[k];
+        document.querySelectorAll("[data-acc='"+k+"']").forEach(function(x){x.classList.toggle("sel", state.acc[k]);});
+        syncTryOn();
+      });
+    });
+  }
+  bindAcc("accrow"); bindAcc("accrow2");
+
+  /* fit preference */
+  document.querySelectorAll("#fitpref .chipbtn").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll("#fitpref .chipbtn").forEach(function(x){x.classList.remove("sel");});
+      b.classList.add("sel"); state.fitPref=b.dataset.v;
+    });
+  });
+  document.querySelectorAll("#stylepref .chipbtn").forEach(function(b){
+    b.addEventListener("click",function(){b.classList.toggle("sel");});
+  });
+
+  /* size computation */
+  window.computeSize=function(){
+    var h=+document.getElementById("mH").value||165,
+        w=+document.getElementById("mW").value||58,
+        bu=+document.getElementById("mB").value||88,
+        wa=+document.getElementById("mWa").value||70,
+        hp=+document.getElementById("mHp").value||94;
+    var score=(bu-84)/8 + (wa-66)/8 + (hp-90)/8 + (w - (h-105))/12;
+    if(state.fitPref==="slim") score-=0.5;
+    if(state.fitPref==="oversized") score+=0.5;
+    var sz = score < -0.6 ? "S" : (score > 1.1 ? "L" : "M");
+    state.recommended=sz;
+    var conf=Math.max(62, Math.min(97, Math.round(95-Math.abs(score-0.25)*9)));
+    state.conf=conf;
+    var box=document.getElementById("sizeResult");
+    box.classList.add("show");
+    box.querySelectorAll(".sizeLetters span").forEach(function(s){s.classList.toggle("pick", s.dataset.sz===sz);});
+    document.getElementById("sizeWhy").textContent =
+      "Based on your bust ("+bu+" cm), waist ("+wa+" cm) and hips ("+hp+" cm) with a "+state.fitPref+" fit, size "+sz+" should sit best.";
+    document.getElementById("confTxt").textContent = conf+"% confidence";
+    requestAnimationFrame(function(){document.getElementById("confFill").style.width=conf+"%";});
+    box.scrollIntoView({behavior:"smooth", block:"nearest"});
+  };
+
+  /* upload */
+  window.photoChosen=function(src){
+    var ok=document.getElementById("photoOk");
+    ok.classList.add("show");
+    ok.scrollIntoView({behavior:"smooth", block:"nearest"});
+  };
+
+  /* try-on */
+  document.querySelectorAll(".swatch").forEach(function(s){
+    s.addEventListener("click",function(){
+      document.querySelectorAll(".swatch").forEach(function(x){x.classList.remove("sel");});
+      s.classList.add("sel");
+      state.product.color=s.dataset.c;
+      syncTryOn();
+    });
+  });
+  document.querySelectorAll("#trySize .chipbtn").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll("#trySize .chipbtn").forEach(function(x){x.classList.remove("sel");});
+      b.classList.add("sel"); state.trySize=b.dataset.sz; syncTryOn();
+    });
+  });
+  function syncTryOn(){
+    var g=document.getElementById("garment");
+    g.style.background=state.product.color;
+    g.classList.toggle("dress", state.product.type==="dress");
+    var widths={S:76, M:88, L:102};
+    g.style.width=widths[state.trySize]+"px";
+    var fs=document.getElementById("fitstage");
+    ["necklace","bag","sunglasses"].forEach(function(k){
+      fs.classList.toggle("wear-"+k, state.acc[k]);
+    });
+    document.getElementById("tryonSub").textContent=state.product.name+" · size "+state.trySize+" · "+state.product.price;
+    document.getElementById("buyBtn").textContent="Buy now · "+state.product.price;
+  }
+  syncTryOn();
+
+  /* results */
+  function renderResults(){
+    var match = state.trySize===state.recommended;
+    var order={S:0,M:1,L:2};
+    var diff=order[state.trySize]-order[state.recommended];
+    var score = match ? 92 : (Math.abs(diff)===1 ? 61 : 38);
+    var verdictEl=document.getElementById("verdict");
+    var col = score>=80 ? "var(--good)" : (score>=55 ? "var(--warn)" : "var(--poor)");
+    verdictEl.textContent = score>=80 ? "Highly fit" : (score>=55 ? "Moderate fit" : "Poor fit");
+    verdictEl.style.color=col;
+    document.getElementById("scoreNum").textContent=score;
+    var arc=document.getElementById("arcfill");
+    arc.style.borderColor=col;
+    arc.style.transform="rotate(0deg)";
+    requestAnimationFrame(function(){arc.style.transform="rotate("+(score/100*180)+"deg)";});
+
+    var zones=[
+      {z:"Shoulders", ok: true},
+      {z:"Bust / chest", ok: diff===0, tight:diff<0},
+      {z:"Waist", ok: diff===0, tight:diff<0},
+      {z:"Hips", ok: diff>=0, tight:diff<0}
+    ];
+    document.getElementById("zones").innerHTML=zones.map(function(z){
+      var cls = z.ok ? "good" : (z.tight ? "poor" : "warn");
+      var txt = z.ok ? "Good fit" : (z.tight ? "Too tight" : "Loose");
+      return '<div class="zone"><span>'+z.z+'</span><span class="pill '+cls+'">'+txt+"</span></div>";
+    }).join("");
+
+    var fin=document.getElementById("finalRec");
+    if(match){
+      fin.innerHTML="<b>Final recommendation — go with "+state.recommended+".</b><br>Size "+state.recommended+" matches your measurements with "+(state.conf||90)+"% confidence. Expected fit: true to size.";
+    } else {
+      fin.innerHTML="<b>Final recommendation — switch to "+state.recommended+".</b><br>You tried "+state.trySize+", but your measurements point to "+state.recommended+". "+(diff<0?"The "+state.trySize+" will pull at the bust and waist.":"The "+state.trySize+" will hang loose at the waist.");
+    }
+  }
+})();
+</script>
+</body>
+</html>
