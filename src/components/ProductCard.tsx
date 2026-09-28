@@ -9,21 +9,24 @@ export function ProductCard({
   selected,
   onSelect,
   compact,
+  priority,
 }: {
   product: Product;
   selected?: boolean;
   onSelect?: () => void;
   compact?: boolean;
+  /** Load immediately (first row / above the fold). */
+  priority?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`group flex w-full flex-col text-left transition-transform active:scale-[0.985] ${compact ? "min-w-[150px] max-w-[150px]" : ""}`}
+      className={`group flex w-full flex-col text-left transition-transform active:scale-[0.985] ${compact ? "min-w-[150px] max-w-[150px] md:min-w-0 md:max-w-none" : ""}`}
     >
       <div
-        className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border bg-chip transition-colors ${
+        className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border bg-white transition-colors ${
           selected ? "border-ink ring-2 ring-ink/80" : "border-line"
         }`}
       >
@@ -31,9 +34,13 @@ export function ProductCard({
           src={product.image}
           alt={product.name}
           fill
-          sizes="(max-width: 440px) 50vw, 200px"
+          loading={priority ? "eager" : "lazy"}
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 280px"
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
+        <span className="absolute bottom-2 left-2 rounded-full bg-panel/90 px-2 py-0.5 text-[0.56rem] font-bold uppercase tracking-wider text-ink-soft">
+          {product.gender}
+        </span>
         {product.trending && (
           <span className="absolute left-2 top-2 rounded-full bg-panel/90 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-wider text-accent-ink">
             Trending

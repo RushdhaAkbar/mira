@@ -3,14 +3,52 @@
  * (gemini-2.5-flash-image) through the Gemini REST API.
  *
  * Input: the shopper's photo plus the garment photo. Output: PNG base64.
- * Returns null when GEMINI_API_KEY is missing or the call fails, in which
- * case the client shows the 2D overlay preview instead.
+ * Uses fal.ai when FAL_KEY is set, otherwise Google's Gemini API.
+ * Returns null when no key is set or the call fails, in which case the
+ * client shows the 2D overlay preview instead.
  */
 
 const MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
 
+const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "fal-ai/nano-banana/edit";
+
 export function imageGenEnabled(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.FAL_KEY || process.env.GEMINI_API_KEY);
+}
+
+/** Nano Banana via fal.ai (prepaid credits). Images are sent as data URIs. */
+async function renderViaFal(prompt: string, images: { base64: string; mime: string }[]) {
+  try {
+    const res = await fetch(`https://fal.run/${FAL_MODEL}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Key ${process.env.FAL_KEY}` },
+      body: JSON.stringify({
+        prompt,
+        image_urls: images.map((i) => `data:${i.mime};base64,${i.base64}`),
+        num_images: 1,
+        output_format: "png",
+      }),
+      signal: AbortSignal.timeout(110_000),
+    });
+    if (!res.ok) {
+      console.error("[fal] HTTP", res.status, await res.text());
+      return null;
+    }
+    const json = (await res.json()) as { images?: { url: string; content_type?: string }[] };
+    const url = json.images?.[0]?.url;
+    if (!url) {
+      console.error("[fal] no image in response", JSON.stringify(json).slice(0, 500));
+      return null;
+    }
+    if (url.startsWith("data:")) {
+      const m = /^data:([^;]+);base64,(.+)$/.exec(url);
+      return m ? { mime: m[1], base64: m[2] } : null;
+    }
+    return await fetchImageAsBase64(url);
+  } catch (err) {
+    console.error("[fal] request failed", err);
+    return null;
+  }
 }
 
 interface TryOnInput {
@@ -20,7 +58,6 @@ interface TryOnInput {
   garmentType: string;
   colorName: string;
   size: "S" | "M" | "L";
-  accessories: string[];
 }
 
 const SIZE_HINT: Record<TryOnInput["size"], string> = {
@@ -31,17 +68,19 @@ const SIZE_HINT: Record<TryOnInput["size"], string> = {
 
 export async function renderTryOn(input: TryOnInput): Promise<{ base64: string; mime: string } | null> {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  if (!process.env.FAL_KEY && !key) return null;
 
   const prompt = [
     `Virtual try-on. The first image is a person. The second image shows a ${input.garmentType} called "${input.garmentName}" in the colour ${input.colorName}.`,
     `Dress the person from the first image in that garment. Keep the person's face, hair, skin tone, body shape, pose, hands and the background exactly as they are. Replace only the clothing the garment would cover.`,
     SIZE_HINT[input.size],
-    input.accessories.length ? `Also add these accessories naturally: ${input.accessories.join(", ")}.` : "",
     `Photorealistic, natural lighting, no text or watermark, output a single image at the same framing as the first image.`,
   ]
     .filter(Boolean)
     .join(" ");
+
+  // Prefer fal.ai when its key is set; otherwise call Google directly.
+  if (process.env.FAL_KEY) return renderViaFal(prompt, [input.person, input.garment]);
 
   const body = {
     contents: [
@@ -62,7 +101,7 @@ export async function renderTryOn(input: TryOnInput): Promise<{ base64: string; 
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
         method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
+        headers: { "content-type": "application/json", "x-goog-api-key": key ?? "" },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(90_000),
       },

@@ -1,0 +1,159 @@
+{
+  "_note": "Seed catalogue. Garments are solid-colour, clear-silhouette pieces chosen because AI try-on renders them reliably. Run `npm run seed` to (re)load them and their images into MongoDB.",
+  "products": [
+    {
+      "id": "classic-white-tee",
+      "name": "Classic cotton tee",
+      "type": "top",
+      "category": "Tops",
+      "gender": "Unisex",
+      "priceLKR": 2900,
+      "colors": [
+        { "name": "White", "hex": "#F4F2EE" },
+        { "name": "Black", "hex": "#1E1E1E" }
+      ],
+      "fabric": "100% combed cotton",
+      "description": "A clean crew-neck tee with a regular fit. The easiest piece to try on.",
+      "trending": true,
+      "imagePrompt": "a plain white short-sleeve cotton crew-neck t-shirt, regular fit"
+    },
+    {
+      "id": "oxford-shirt",
+      "name": "Oxford button-down shirt",
+      "type": "top",
+      "category": "Tops",
+      "gender": "Unisex",
+      "priceLKR": 5200,
+      "colors": [
+        { "name": "Sky blue", "hex": "#A9C4E0" },
+        { "name": "White", "hex": "#F3F3F0" }
+      ],
+      "fabric": "Cotton oxford weave",
+      "description": "Long sleeves, button-down collar and a relaxed straight hem.",
+      "trending": true,
+      "imagePrompt": "a light sky-blue long-sleeve cotton oxford button-down shirt, fully buttoned, straight hem"
+    },
+    {
+      "id": "everyday-hoodie",
+      "name": "Everyday hoodie",
+      "type": "top",
+      "category": "Tops",
+      "gender": "Unisex",
+      "priceLKR": 5900,
+      "colors": [
+        { "name": "Heather grey", "hex": "#A7A9AC" },
+        { "name": "Navy", "hex": "#26324A" }
+      ],
+      "fabric": "Brushed cotton fleece",
+      "description": "Soft pullover hoodie with a kangaroo pocket and ribbed cuffs.",
+      "imagePrompt": "a plain heather-grey pullover hoodie with a kangaroo pocket and ribbed cuffs, no print, no logo"
+    },
+    {
+      "id": "rib-knit-sweater",
+      "name": "Rib-knit sweater",
+      "type": "top",
+      "category": "Tops",
+      "gender": "Unisex",
+      "priceLKR": 6400,
+      "colors": [
+        { "name": "Cream", "hex": "#EDE3D1" },
+        { "name": "Charcoal", "hex": "#3B3B3D" }
+      ],
+      "fabric": "Cotton-wool blend",
+      "description": "A chunky ribbed crew-neck sweater that sits just below the hip.",
+      "imagePrompt": "a cream chunky rib-knit crew-neck sweater with long sleeves"
+    },
+    {
+      "id": "satin-blouse",
+      "name": "Satin blouse",
+      "type": "top",
+      "category": "Tops",
+      "gender": "Women",
+      "priceLKR": 4800,
+      "colors": [
+        { "name": "Emerald", "hex": "#1F5F4A" },
+        { "name": "Ivory", "hex": "#EFE8DA" }
+      ],
+      "fabric": "Satin crepe",
+      "description": "Fluid long-sleeve blouse with a soft collar and covered buttons.",
+      "trending": true,
+      "imagePrompt": "an emerald green long-sleeve satin blouse with a soft collar and covered buttons"
+    },
+    {
+      "id": "denim-jacket",
+      "name": "Classic denim jacket",
+      "type": "outerwear",
+      "category": "Outerwear",
+      "gender": "Unisex",
+      "priceLKR": 8900,
+      "colors": [
+        { "name": "Mid blue", "hex": "#4F6F96" },
+        { "name": "Black denim", "hex": "#2A2B2E" }
+      ],
+      "fabric": "Rigid cotton denim",
+      "description": "The trucker jacket: chest pockets, button front and a boxy fit.",
+      "imagePrompt": "a classic mid-blue denim trucker jacket with two chest pockets and metal buttons, buttoned closed"
+    },
+    {
+      "id": "tailored-blazer",
+      "name": "Tailored blazer",
+      "type": "outerwear",
+      "category": "Outerwear",
+      "gender": "Women",
+      "priceLKR": 9800,
+      "colors": [
+        { "name": "Camel", "hex": "#B08A5A" },
+        { "name": "Black", "hex": "#1F1E1C" }
+      ],
+      "fabric": "Wool blend",
+      "description": "Single-breasted blazer with a soft shoulder. Layers over anything.",
+      "imagePrompt": "a camel single-breasted tailored women's blazer with notch lapels, one button closed"
+    },
+    {
+      "id": "linen-wrap-dress",
+      "name": "Linen wrap dress",
+      "type": "dress",
+      "category": "Dresses",
+      "gender": "Women",
+      "priceLKR": 7900,
+      "colors": [
+        { "name": "Terracotta", "hex": "#B5553A" },
+        { "name": "Sage", "hex": "#8C9C86" }
+      ],
+      "fabric": "Washed linen",
+      "description": "Midi wrap dress with short sleeves and a tie waist that adjusts to you.",
+      "trending": true,
+      "imagePrompt": "a terracotta linen midi wrap dress with short sleeves, a V-neck and a tie waist"
+    },
+    {
+      "id": "slip-midi-dress",
+      "name": "Satin slip dress",
+      "type": "dress",
+      "category": "Dresses",
+      "gender": "Women",
+      "priceLKR": 7400,
+      "colors": [
+        { "name": "Black", "hex": "#1C1B1D" },
+        { "name": "Champagne", "hex": "#D9C3A0" }
+      ],
+      "fabric": "Satin viscose",
+      "description": "Bias-cut midi slip with thin straps that skims the body.",
+      "imagePrompt": "a black satin bias-cut midi slip dress with thin spaghetti straps"
+    },
+    {
+      "id": "belted-shirt-dress",
+      "name": "Belted shirt dress",
+      "type": "dress",
+      "category": "Dresses",
+      "gender": "Women",
+      "priceLKR": 6900,
+      "colors": [
+        { "name": "Navy", "hex": "#22304A" },
+        { "name": "Olive", "hex": "#6B6A45" }
+      ],
+      "fabric": "Cotton poplin",
+      "description": "Knee-length shirt dress with rolled sleeves and a self-tie belt.",
+      "imagePrompt": "a navy cotton knee-length shirt dress with a collar, button front, short rolled sleeves and a self-tie belt"
+    }
+  ]
+}

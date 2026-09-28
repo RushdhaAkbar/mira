@@ -77,7 +77,7 @@ export function fallbackExplanation(tried: Size, recommended: Size, confidence: 
     return `Final recommendation: go with ${recommended}. Size ${recommended} matches your measurements with ${confidence}% confidence. Expected fit: true to size.`;
   }
   const diff = ORDER[tried] - ORDER[recommended];
-  return `Final recommendation: switch to ${recommended}. You tried ${tried}, but your measurements point to ${recommended}. ${
+  return `Final recommendation: switch to ${recommended}. You chose ${tried}, but your measurements point to ${recommended}. ${
     diff < 0 ? `The ${tried} will pull at the bust and waist.` : `The ${tried} will hang loose at the waist.`
   }`;
 }

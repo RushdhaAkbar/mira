@@ -20,6 +20,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Photo is too large (max 4 MB)" }, { status: 413 });
   }
 
-  const id = await savePhoto(parsed.mime, parsed.base64);
-  return NextResponse.json({ id, persistent: hasMongo(), expiresInHours: 24 });
+  try {
+    const id = await savePhoto(parsed.mime, parsed.base64);
+    return NextResponse.json({ id, persistent: hasMongo(), expiresInHours: 24 });
+  } catch (err) {
+    console.error("[photos] save failed", err);
+    return NextResponse.json({ error: "Could not save your photo. Please try again in a moment." }, { status: 503 });
+  }
 }

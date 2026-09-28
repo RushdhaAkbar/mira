@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowIcon } from "@/components/Icons";
-import { ChipRow, CtaLink, PageHeader, ProgressSteps, Section, StickyCta } from "@/components/ui";
+import { ChipRow, CtaLink, PageHeader, ProgressSteps, Section, SizeChart, Split, StickyCta } from "@/components/ui";
 import { recommendSize } from "@/lib/sizing";
 import { useStore } from "@/lib/store";
 import type { FitPref, Measurements, Size } from "@/lib/types";
@@ -25,6 +25,7 @@ export default function ProfilePage() {
 
 function ProfileForm() {
   const { state, set } = useStore();
+  const isAi = state.variant === "ai";
   const [m, setM] = useState<Measurements>(state.measurements);
   const [computed, setComputed] = useState(state.recommendation);
   const [width, setWidth] = useState(0);
@@ -41,13 +42,10 @@ function ProfileForm() {
     set({ measurements: m, recommendation: rec, trySize: rec.size as Size, fit: null });
   };
 
-  return (
-    <div>
-      <ProgressSteps step={1} />
-      <PageHeader eyebrow="Step 1 of 4" title="Your size profile" subtitle="Five measurements are enough for an honest S / M / L recommendation." />
-
+  const form = (
+    <>
       <Section title="Measurements">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {FIELDS.map((f) => (
             <label key={f.key} className="field">
               <span className="text-[0.72rem] font-semibold text-ink-soft">
@@ -78,52 +76,79 @@ function ProfileForm() {
         />
       </Section>
 
-      <Section title="Your style">
-        <ChipRow
-          multi
-          options={STYLE_TAGS.map((t) => ({ value: t, label: t }))}
-          value={state.styleTags}
-          onChange={(v) =>
-            set((s) => ({ styleTags: s.styleTags.includes(v) ? s.styleTags.filter((x) => x !== v) : [...s.styleTags, v] }))
-          }
-        />
-      </Section>
+      {isAi && (
+        <Section title="Your style">
+          <ChipRow
+            multi
+            options={STYLE_TAGS.map((t) => ({ value: t, label: t }))}
+            value={state.styleTags}
+            onChange={(v) => set((s) => ({ styleTags: s.styleTags.includes(v) ? s.styleTags.filter((x) => x !== v) : [...s.styleTags, v] }))}
+          />
+        </Section>
+      )}
 
       <Section>
-        <button type="button" className="btn btn-ghost" onClick={compute}>
+        <button type="button" className="btn btn-ghost md:max-w-xs" onClick={compute}>
           Calculate my size
         </button>
       </Section>
+    </>
+  );
 
-      {computed && (
-        <Section title="Recommended size">
-          <div className="card p-4 fade-up">
+  const result = (
+    <>
+      <Section title="Recommended size">
+        {computed ? (
+          <div className="card p-5 fade-up">
             <div className="flex items-center justify-center gap-6">
               {(["S", "M", "L"] as Size[]).map((s) => (
-                <span
-                  key={s}
-                  className={`display text-[2rem] transition-all ${
-                    computed.size === s ? "scale-110 text-accent" : "text-line"
-                  }`}
-                >
+                <span key={s} className={`display text-[2rem] transition-all md:text-[2.6rem] ${computed.size === s ? "scale-110 text-accent" : "text-line"}`}>
                   {s}
                 </span>
               ))}
             </div>
-            <p className="mt-2 text-center text-[0.78rem] text-ink-soft">{computed.reason}</p>
+            <p className="mt-2 text-center text-[0.8rem] text-ink-soft">{computed.reason}</p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line">
               <div className="h-full rounded-full bg-good transition-[width] duration-700" style={{ width: `${width}%` }} />
             </div>
             <div className="mt-1 text-center text-[0.7rem] font-semibold text-ink-soft">{computed.confidence}% confidence</div>
           </div>
+        ) : (
+          <div className="card px-5 py-8 text-center text-[0.8rem] text-ink-soft">
+            Enter your measurements and press <b className="text-ink">Calculate my size</b>.
+          </div>
+        )}
+      </Section>
+
+      {!isAi && (
+        <Section title="Size chart">
+          <SizeChart highlight={computed?.size} />
         </Section>
       )}
 
       <StickyCta>
-        <CtaLink href="/upload">
-          {computed ? "Continue to photo" : "Skip, use size M"} <ArrowIcon width={16} height={16} />
-        </CtaLink>
+        {isAi ? (
+          <CtaLink href="/upload">
+            {computed ? "Continue to photo" : "Skip, use size M"} <ArrowIcon width={16} height={16} />
+          </CtaLink>
+        ) : (
+          <CtaLink href="/results">
+            {computed ? "See my fit" : "Skip, use size M"} <ArrowIcon width={16} height={16} />
+          </CtaLink>
+        )}
       </StickyCta>
+    </>
+  );
+
+  return (
+    <div>
+      <ProgressSteps step={1} />
+      <PageHeader
+        eyebrow={isAi ? "Step 1 of 4" : "Step 1 of 2"}
+        title="Your size profile"
+        subtitle="Five measurements are enough for an honest S / M / L recommendation."
+      />
+      <Split stickyLeft={false} left={<div>{form}</div>} right={result} />
     </div>
   );
 }

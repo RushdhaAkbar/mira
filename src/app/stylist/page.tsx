@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { SparkIcon } from "@/components/Icons";
-import { ChipRow, PageHeader, Section } from "@/components/ui";
+import { ChipRow, PageHeader, Section, useVariantGuard } from "@/components/ui";
 import { bodyShape } from "@/lib/sizing";
 import { useStore } from "@/lib/store";
 import type { StylistOutfit } from "@/lib/types";
 
 const OCCASIONS = ["Work", "Brunch", "Date night", "Wedding guest", "Weekend", "Evening"];
 
+/** AI stylist (AI version only). */
 export default function StylistPage() {
+  useVariantGuard(["ai"], "/standard");
   const { state, set } = useStore();
   const [occasion, setOccasion] = useState("Brunch");
   const [busy, setBusy] = useState(false);
@@ -64,14 +66,14 @@ export default function StylistPage() {
       </Section>
 
       <Section>
-        <button type="button" className="btn btn-primary" onClick={ask} disabled={busy}>
+        <button type="button" className="btn btn-primary md:max-w-xs" onClick={ask} disabled={busy}>
           {busy ? "Styling…" : "Suggest outfits"}
         </button>
       </Section>
 
       {busy && (
         <Section>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-5">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-28 rounded-xl shimmer" />
             ))}
@@ -81,7 +83,7 @@ export default function StylistPage() {
 
       {!busy && state.outfits.length > 0 && (
         <Section title={source === "claude" ? "Styled by Mira AI" : "Suggested looks"}>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-5">
             {state.outfits.map((o, i) => (
               <article key={`${o.title}-${i}`} className="card p-4 fade-up" style={{ animationDelay: `${i * 80}ms` }}>
                 <div className="flex items-start justify-between gap-3">

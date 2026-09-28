@@ -1,4 +1,22 @@
+import dns from "node:dns";
 import { MongoClient, type Db } from "mongodb";
+
+/**
+ * Some home and mobile routers refuse the DNS SRV lookup that
+ * mongodb+srv:// addresses need (querySrv ECONNREFUSED). Outside Vercel,
+ * route those lookups through public DNS first. This only affects
+ * dns.resolve* (used by the Mongo driver), not normal hostname lookups.
+ */
+let dnsPatched = false;
+function preferPublicDnsForSrv(uri: string) {
+  if (dnsPatched || process.env.VERCEL || !uri.startsWith("mongodb+srv://")) return;
+  dnsPatched = true;
+  const publicDns = ["8.8.8.8", "1.1.1.1"];
+  const current = dns.getServers().filter((s) => !publicDns.includes(s));
+  // The driver uses dns.promises, which can hold its own server list, so set both.
+  dns.setServers([...publicDns, ...current]);
+  dns.promises.setServers([...publicDns, ...current]);
+}
 
 /**
  * Cached MongoDB connection for serverless (Vercel) environments.
@@ -19,11 +37,19 @@ export async function getDb(): Promise<Db | null> {
   if (!uri) return null;
 
   if (!global.__miraMongo) {
+    preferPublicDnsForSrv(uri);
     const client = new MongoClient(uri);
     global.__miraMongo = { client, promise: client.connect(), indexed: false };
   }
   const cached = global.__miraMongo;
-  const client = await cached.promise;
+  let client: MongoClient;
+  try {
+    client = await cached.promise;
+  } catch (err) {
+    // Forget the failed attempt so the next request retries instead of failing forever.
+    global.__miraMongo = undefined;
+    throw err;
+  }
   const db = client.db(process.env.MONGODB_DB || "mira");
 
   if (!cached.indexed) {
@@ -35,6 +61,9 @@ export async function getDb(): Promise<Db | null> {
       db.collection("tryons").createIndex({ photoId: 1, productId: 1, colorHex: 1, size: 1 }),
       db.collection("orders").createIndex({ createdAt: -1 }),
       db.collection("profiles").createIndex({ createdAt: -1 }),
+      db.collection("feedback").createIndex({ createdAt: -1 }),
+      db.collection("feedback").createIndex({ variant: 1 }),
+      db.collection("ai_generations").createIndex({ createdAt: -1 }),
     ]);
   }
   return db;
@@ -51,13 +80,21 @@ interface MemoryPhoto {
   expiresAt: number;
 }
 
-declare global {
-  var __miraMemory: { photos: Map<string, MemoryPhoto>; tryons: Map<string, string> } | undefined;
+interface MemoryStore {
+  photos: Map<string, MemoryPhoto>;
+  tryons: Map<string, string>;
+  testers: Map<string, number>; // testerId -> AI generations used
+  generations: number;
+  feedback: Record<string, unknown>[];
 }
 
-export function memory() {
+declare global {
+  var __miraMemory: MemoryStore | undefined;
+}
+
+export function memory(): MemoryStore {
   if (!global.__miraMemory) {
-    global.__miraMemory = { photos: new Map(), tryons: new Map() };
+    global.__miraMemory = { photos: new Map(), tryons: new Map(), testers: new Map(), generations: 0, feedback: [] };
   }
   const m = global.__miraMemory;
   const now = Date.now();

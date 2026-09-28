@@ -1,13 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ProductCard } from "@/components/ProductCard";
+import { ComingSoon } from "@/components/ComingSoon";
 import { ArrowIcon } from "@/components/Icons";
+import { ProductCard } from "@/components/ProductCard";
 import { ChipRow, CtaLink, PageHeader, Section, StickyCta, Swatch } from "@/components/ui";
-import { ACCESSORIES, CATEGORIES, PRODUCTS, findProduct, formatLKR } from "@/lib/products";
-import { useStore } from "@/lib/store";
-import type { AccessoryKey } from "@/lib/types";
+import { CATEGORIES, formatLKR } from "@/lib/products";
+import { TRYON_RESET, useStore } from "@/lib/store";
 
 export default function ShopPage() {
   return (
@@ -21,100 +22,106 @@ function Shop() {
   const params = useSearchParams();
   const initialCat = params.get("cat") ?? "All";
   const [cat, setCat] = useState<string>(CATEGORIES.includes(initialCat as never) ? initialCat : "All");
-  const { state, set, toast } = useStore();
+  const { state, set, toast, products, product } = useStore();
+  const isAi = state.variant === "ai";
 
-  const list = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
-  const product = findProduct(state.productId) ?? PRODUCTS[0];
+  const list = cat === "All" ? products : products.filter((p) => p.category === cat);
   const color = product.colors.find((c) => c.hex === state.colorHex) ?? product.colors[0];
-
-  const toggleAcc = (k: AccessoryKey) => set((s) => ({ accessories: { ...s.accessories, [k]: !s.accessories[k] } }));
 
   const addToBag = () => {
     set((s) => ({
-      cart: [
-        ...s.cart,
-        { productId: product.id, name: product.name, size: s.trySize, colorHex: color.hex, image: product.image, priceLKR: product.priceLKR },
-      ],
+      cart: [...s.cart, { productId: product.id, name: product.name, size: s.trySize, colorHex: color.hex, image: product.image, priceLKR: product.priceLKR }],
     }));
     toast(`Added to bag: ${product.name} · size ${state.trySize}`);
   };
 
-  return (
-    <div>
-      <PageHeader eyebrow="Catalogue" title="Choose a look" subtitle="Pick one garment, then layer accessories that carry into your try-on." />
-
-      <Section>
-        <ChipRow options={CATEGORIES.map((c) => ({ value: c, label: c }))} value={cat} onChange={setCat} />
-      </Section>
-
-      <Section>
-        <div className="grid grid-cols-2 gap-3">
-          {list.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              selected={state.productId === p.id}
-              onSelect={() => set({ productId: p.id, colorHex: p.colors[0].hex, tryOnImage: null, tryOnMode: null, fit: null })}
-            />
+  const selectedPanel = (
+    <div className="card overflow-hidden">
+      <div className="relative hidden aspect-[4/3] bg-white md:block">
+        <Image src={product.image} alt={product.name} fill sizes="360px" className="object-contain p-4" />
+      </div>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <b className="block text-[0.95rem] text-ink">{product.name}</b>
+            <span className="text-[0.74rem] text-ink-soft">
+              {product.fabric} · {formatLKR(product.priceLKR)}
+            </span>
+          </div>
+          <span className="pill good">{color.name}</span>
+        </div>
+        <p className="mt-2 text-[0.78rem] text-ink-soft">{product.description}</p>
+        <div className="mt-3 flex items-center gap-2">
+          {product.colors.map((c) => (
+            <Swatch key={c.hex} hex={c.hex} name={c.name} selected={c.hex === color.hex} onClick={() => set({ colorHex: c.hex, ...TRYON_RESET })} />
           ))}
         </div>
-      </Section>
+      </div>
+    </div>
+  );
 
-      <Section title="Selected">
-        <div className="card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <b className="block text-[0.95rem] text-ink">{product.name}</b>
-              <span className="text-[0.74rem] text-ink-soft">
-                {product.fabric} · {formatLKR(product.priceLKR)}
-              </span>
+  const actions = (
+    <div className="flex gap-2">
+      <button type="button" className="btn btn-ghost" onClick={addToBag}>
+        Add to bag
+      </button>
+      <CtaLink href="/profile">
+        {isAi ? "Try it on" : "Find my size"} <ArrowIcon width={16} height={16} />
+      </CtaLink>
+    </div>
+  );
+
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Catalogue"
+        title="Choose a look"
+        subtitle={isAi ? "Pick one garment to try on. Solid colours and clear shapes give the best results." : "Pick a garment, then find the size that fits you."}
+      />
+
+      <div className="md:grid md:grid-cols-[1fr_340px] md:items-start md:gap-10">
+        <div>
+          <Section>
+            <ChipRow options={CATEGORIES.map((c) => ({ value: c, label: c }))} value={cat} onChange={setCat} />
+          </Section>
+          <Section>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
+              {list.map((p, i) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  priority={i < 6}
+                  selected={state.productId === p.id}
+                  onSelect={() => set({ productId: p.id, colorHex: p.colors[0].hex, ...TRYON_RESET })}
+                />
+              ))}
             </div>
-            <span className="pill good">{color.name}</span>
-          </div>
-          <p className="mt-2 text-[0.78rem] text-ink-soft">{product.description}</p>
-          <div className="mt-3 flex items-center gap-2">
-            {product.colors.map((c) => (
-              <Swatch key={c.hex} hex={c.hex} name={c.name} selected={c.hex === color.hex} onClick={() => set({ colorHex: c.hex, tryOnImage: null })} />
-            ))}
-          </div>
+          </Section>
         </div>
-      </Section>
 
-      <Section title="Accessories">
-        <div className="flex flex-col gap-2">
-          {ACCESSORIES.map((a) => {
-            const on = state.accessories[a.key];
-            return (
-              <button
-                key={a.key}
-                type="button"
-                aria-pressed={on}
-                onClick={() => toggleAcc(a.key)}
-                className={`card flex items-center justify-between px-4 py-3 text-left transition-colors ${on ? "border-ink" : ""}`}
-              >
-                <span className="text-[0.82rem] font-semibold text-ink">{a.label}</span>
-                <span className="flex items-center gap-3 text-[0.72rem] text-ink-soft">
-                  {formatLKR(a.priceLKR)}
-                  <span className={`inline-flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${on ? "bg-ink" : "bg-line"}`}>
-                    <span className={`h-4 w-4 rounded-full bg-panel transition-transform ${on ? "translate-x-4" : ""}`} />
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
+        {/* Desktop: sticky side panel with the selection and actions. */}
+        <aside className="hidden md:sticky md:top-24 md:block">
+          <div className="label mb-2.5">Selected</div>
+          {selectedPanel}
+          <div className="mt-4">{actions}</div>
+          {isAi && (
+            <div className="mt-6">
+              <ComingSoon compact />
+            </div>
+          )}
+        </aside>
+      </div>
 
-      <StickyCta>
-        <div className="flex gap-2">
-          <button type="button" className="btn btn-ghost" onClick={addToBag}>
-            Add to bag
-          </button>
-          <CtaLink href="/profile">
-            Try it on <ArrowIcon width={16} height={16} />
-          </CtaLink>
-        </div>
-      </StickyCta>
+      {/* Phones: selection below the grid, actions in the sticky bar. */}
+      <div className="md:hidden">
+        <Section title="Selected">{selectedPanel}</Section>
+        {isAi && (
+          <Section>
+            <ComingSoon />
+          </Section>
+        )}
+        <StickyCta>{actions}</StickyCta>
+      </div>
     </div>
   );
 }
