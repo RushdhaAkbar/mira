@@ -71,6 +71,24 @@ export async function getDb(): Promise<Db | null> {
 
 export const PHOTO_TTL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Plain-English cause of a MongoDB failure, safe to show on screen (never
+ * includes the connection string). Helps fix deployment settings quickly.
+ */
+export function describeDbError(err: unknown): string {
+  const e = err as { name?: string; message?: string; code?: number | string; codeName?: string };
+  const msg = `${e?.name ?? ""} ${e?.codeName ?? ""} ${e?.message ?? ""}`.toLowerCase();
+  if (msg.includes("bad auth") || msg.includes("authentication failed") || e?.code === 8000 || e?.code === 18)
+    return "Database login failed. Check the username and password in MONGODB_URI.";
+  if (msg.includes("invalid scheme") || msg.includes("mongoparseerror") || msg.includes("uri must"))
+    return "MONGODB_URI is not a valid address. On Vercel, paste it without quotes.";
+  if (msg.includes("querysrv") || msg.includes("enotfound"))
+    return "Database address not found. Check the cluster name in MONGODB_URI.";
+  if (msg.includes("serverselection") || msg.includes("timed out") || msg.includes("econnrefused") || msg.includes("whitelist"))
+    return "Can't reach the database. In MongoDB Atlas > Network Access, allow 0.0.0.0/0.";
+  return "Database error. See the server logs for details.";
+}
+
 /* ---------- in-memory fallback for local dev without Mongo ---------- */
 
 interface MemoryPhoto {

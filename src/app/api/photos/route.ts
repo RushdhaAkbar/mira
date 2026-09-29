@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseDataUrl, savePhoto } from "@/lib/photos";
-import { hasMongo } from "@/lib/mongodb";
+import { describeDbError, hasMongo } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ id, persistent: hasMongo(), expiresInHours: 24 });
   } catch (err) {
     console.error("[photos] save failed", err);
-    return NextResponse.json({ error: "Could not save your photo. Please try again in a moment." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Could not save your photo. Please try again in a moment.", detail: describeDbError(err) },
+      { status: 503 },
+    );
   }
 }

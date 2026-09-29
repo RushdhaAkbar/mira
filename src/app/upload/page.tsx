@@ -51,8 +51,8 @@ export default function UploadPage() {
         body: JSON.stringify({ dataUrl }),
       });
       if (!up.ok) {
-        const err = (await up.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(err?.error || `Upload failed (${up.status})`);
+        const err = (await up.json().catch(() => null)) as { error?: string; detail?: string } | null;
+        throw new Error([err?.error || `Upload failed (${up.status})`, err?.detail].filter(Boolean).join(" "));
       }
       const { id } = (await up.json()) as { id: string };
 
