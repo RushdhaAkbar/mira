@@ -4,7 +4,7 @@ import { getFeedbackRows, isAdmin } from "@/lib/admin";
 export const dynamic = "force-dynamic";
 
 const COLUMNS = [
-  "createdAt", "variant", "overall", "realism", "fitConfidence", "easeOfUse", "purchaseIntent", "photoComfort",
+  "createdAt", "name", "variant", "overall", "realism", "fitConfidence", "easeOfUse", "purchaseIntent", "photoComfort",
   "recommend", "liked", "improve", "ageRange", "gender", "shopsOnline", "email", "productName", "colorName",
   "triedSize", "recommendedSize", "aiRendered", "device",
 ] as const;

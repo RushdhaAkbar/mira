@@ -60,6 +60,7 @@ export function FeedbackSheet({ open, onClose, onDone }: { open: boolean; onClos
   const variant: Variant = state.variant;
   const [ratings, setRatings] = useState<Partial<Record<RatingKey, number>>>({});
   const [recommend, setRecommend] = useState<number | null>(null);
+  const [name, setName] = useState("");
   const [liked, setLiked] = useState("");
   const [improve, setImprove] = useState("");
   const [about, setAbout] = useState({ ageRange: "", gender: "", shopsOnline: "", email: "" });
@@ -69,10 +70,14 @@ export function FeedbackSheet({ open, onClose, onDone }: { open: boolean; onClos
   if (!open) return null;
 
   const questions = QUESTIONS[variant];
-  const complete = questions.every((q) => ratings[q.key]) && recommend !== null;
+  const complete = questions.every((q) => ratings[q.key]) && recommend !== null && name.trim().length > 0;
   const color = product.colors.find((c) => c.hex === state.colorHex) ?? product.colors[0];
 
   const submit = async () => {
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
     if (!complete) {
       setError("Please answer every rating question.");
       return;
@@ -88,6 +93,7 @@ export function FeedbackSheet({ open, onClose, onDone }: { open: boolean; onClos
       purchaseIntent: ratings.purchaseIntent!,
       photoComfort: ratings.photoComfort ?? null,
       recommend: recommend!,
+      name: name.trim(),
       liked,
       improve,
       ...about,
@@ -133,10 +139,23 @@ export function FeedbackSheet({ open, onClose, onDone }: { open: boolean; onClos
           {variant === "ai" ? "How was your try-on?" : "How was your experience?"}
         </h2>
         <p className="mt-1 text-[0.76rem] text-ink-soft">
-          Your answers are anonymous and used only for a university research study. 1 is lowest, 5 is highest.
+          Your answers are used only for a university research study. 1 is lowest, 5 is highest.
         </p>
 
         <div className="mt-4 flex flex-col gap-4">
+          <label className="field">
+            <span className="text-[0.8rem] font-semibold text-ink">Your name</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Required"
+              autoComplete="name"
+              required
+              maxLength={120}
+            />
+          </label>
+
           {questions.map(({ key, q }) => (
             <div key={key}>
               <div className="mb-1.5 text-[0.8rem] font-semibold text-ink">{q}</div>

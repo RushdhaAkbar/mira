@@ -48,6 +48,7 @@ export interface FeedbackRow {
   purchaseIntent: number;
   photoComfort: number | null;
   recommend: number;
+  name: string;
   liked: string;
   improve: string;
   ageRange: string;
@@ -99,6 +100,7 @@ export async function getFeedbackRows(): Promise<FeedbackRow[]> {
       purchaseIntent: Number(r.purchaseIntent),
       photoComfort: r.photoComfort === null || r.photoComfort === undefined ? null : Number(r.photoComfort),
       recommend: Number(r.recommend),
+      name: String(r.name ?? ""),
       liked: String(r.liked ?? ""),
       improve: String(r.improve ?? ""),
       ageRange: String(r.ageRange ?? ""),

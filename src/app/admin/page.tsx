@@ -88,7 +88,7 @@ function Responses({ rows }: { rows: FeedbackRow[] }) {
       <table className="w-full min-w-[980px] text-[0.76rem]">
         <thead>
           <tr className="border-b border-line text-left text-ink-soft">
-            {["When", "Version", "Overall", "Real", "Fit", "Ease", "Buy", "Photo", "NPS", "Garment", "Liked", "Improve", "About"].map((h) => (
+            {["When", "Name", "Version", "Overall", "Real", "Fit", "Ease", "Buy", "Photo", "NPS", "Garment", "Liked", "Improve", "About"].map((h) => (
               <th key={h} className="whitespace-nowrap px-3 py-2.5 font-semibold">
                 {h}
               </th>
@@ -101,6 +101,7 @@ function Responses({ rows }: { rows: FeedbackRow[] }) {
               <td className="whitespace-nowrap px-3 py-2.5 text-ink-soft">
                 {new Date(r.createdAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
               </td>
+              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-ink">{r.name || <span className="font-normal text-ink-soft">–</span>}</td>
               <td className="px-3 py-2.5">
                 <span className={`pill ${r.variant === "ai" ? "good" : "warn"}`}>{r.variant === "ai" ? "AI" : "Standard"}</span>
               </td>

@@ -31,12 +31,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Please answer every rating question." }, { status: 400 });
   }
 
+  const name = text(b.name, 120);
+  if (!name) return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
+
   const c = (b.context ?? {}) as Partial<FeedbackInput["context"]>;
   const doc = {
     testerId: await getTesterId(),
     variant,
     ...ratings,
     photoComfort,
+    name,
     liked: text(b.liked),
     improve: text(b.improve),
     ageRange: text(b.ageRange, 40),

@@ -88,6 +88,7 @@ export interface FeedbackInput {
   purchaseIntent: number; // 1-5
   photoComfort: number | null; // 1-5, AI version only (the standard version has no photo)
   recommend: number; // 0-10 (NPS)
+  name: string; // required
   liked: string;
   improve: string;
   ageRange: string;
