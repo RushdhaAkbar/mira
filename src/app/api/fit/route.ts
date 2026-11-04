@@ -3,6 +3,7 @@ import { claudeEnabled, explainFit } from "@/lib/ai/claude";
 import { getDb } from "@/lib/mongodb";
 import { getProduct } from "@/lib/productsServer";
 import { fallbackExplanation, recommendSize, scoreFit } from "@/lib/sizing";
+import { getTesterId, logEvent } from "@/lib/tester";
 import type { FitPref, FitResult, Measurements, Size, Variant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,8 @@ export async function POST(req: Request) {
     explanation: explained ?? fallbackExplanation(tried, rec.size, rec.confidence),
     source: explained ? "claude" : "rules",
   };
+
+  await logEvent(await getTesterId(), "fit_result", `${product.name} · tried ${tried} · recommended ${rec.size} · score ${fit.score}`);
 
   const db = await getDb();
   if (db) {

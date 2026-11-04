@@ -30,6 +30,55 @@ export async function getTesterId(): Promise<string> {
   return id;
 }
 
+export interface TesterRecord {
+  name: string;
+  variant: string;
+  userAgent: string;
+  registeredAt: Date;
+  lastSeenAt: Date;
+}
+
+/** Name the tester gave at the gate, or null if they have not registered yet. */
+export async function getTesterName(testerId: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return memory().names.get(testerId)?.name ?? null;
+  const doc = await db.collection("testers").findOne({ _id: testerId as never }, { projection: { name: 1 } });
+  const name = doc?.name;
+  return typeof name === "string" && name ? name : null;
+}
+
+/** Save the name typed at the gate. Creates the tester record if it does not exist yet. */
+export async function registerTester(testerId: string, input: { name: string; variant: string; userAgent: string }): Promise<void> {
+  const now = new Date();
+  const db = await getDb();
+  if (!db) {
+    const m = memory();
+    const prev = m.names.get(testerId);
+    m.names.set(testerId, { ...input, registeredAt: prev?.registeredAt ?? now, lastSeenAt: now });
+    return;
+  }
+  // aiUsed must exist on insert: reserveGeneration() matches on `aiUsed: { $lt: limit }`.
+  await db.collection("testers").updateOne(
+    { _id: testerId as never },
+    {
+      $set: { name: input.name, variant: input.variant, userAgent: input.userAgent, lastSeenAt: now },
+      $setOnInsert: { createdAt: now, registeredAt: now, aiUsed: 0 },
+    },
+    { upsert: true },
+  );
+}
+
+/** Note that a registered tester opened the app again. */
+export async function touchTester(testerId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    const rec = memory().names.get(testerId);
+    if (rec) rec.lastSeenAt = new Date();
+    return;
+  }
+  await db.collection("testers").updateOne({ _id: testerId as never, name: { $exists: true } }, { $set: { lastSeenAt: new Date() } });
+}
+
 export async function getQuota(testerId: string): Promise<AiQuota> {
   const db = await getDb();
   const used = db
@@ -83,6 +132,20 @@ export async function refundGeneration(testerId: string): Promise<void> {
     return;
   }
   await db.collection("testers").updateOne({ _id: testerId as never, aiUsed: { $gt: 0 } }, { $inc: { aiUsed: -1 } });
+}
+
+export type EventType = "registered" | "photo_uploaded" | "ai_tryon" | "ai_tryon_failed" | "fit_result" | "demo_order";
+
+/** Append one step to the tester's activity track (shown in the admin portal). Never throws. */
+export async function logEvent(testerId: string, type: EventType, detail = ""): Promise<void> {
+  try {
+    const db = await getDb();
+    const doc = { testerId, type, detail: detail.slice(0, 200), createdAt: new Date() };
+    if (db) await db.collection("events").insertOne(doc);
+    else memory().events.push(doc);
+  } catch (err) {
+    console.error("[tester] event log failed", err);
+  }
 }
 
 export async function logGeneration(entry: { testerId: string; productId: string; success: boolean; ms: number }) {

@@ -3,7 +3,7 @@ import { fetchImageAsBase64, imageGenEnabled, renderTryOn } from "@/lib/ai/nanob
 import { getDb, memory, PHOTO_TTL_MS } from "@/lib/mongodb";
 import { loadPhoto } from "@/lib/photos";
 import { getProduct, getProductImage } from "@/lib/productsServer";
-import { getQuota, getTesterId, logGeneration, refundGeneration, reserveGeneration } from "@/lib/tester";
+import { getQuota, getTesterId, logEvent, logGeneration, refundGeneration, reserveGeneration } from "@/lib/tester";
 import type { Size } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +87,7 @@ export async function POST(req: Request) {
     size,
   });
   await logGeneration({ testerId, productId: product.id, success: Boolean(rendered), ms: Date.now() - started });
+  await logEvent(testerId, rendered ? "ai_tryon" : "ai_tryon_failed", `${product.name} · ${color.name} · ${size}`);
 
   if (!rendered) {
     await refundGeneration(testerId);

@@ -61,8 +61,8 @@ export async function getDb(): Promise<Db | null> {
       db.collection("tryons").createIndex({ photoId: 1, productId: 1, colorHex: 1, size: 1 }),
       db.collection("orders").createIndex({ createdAt: -1 }),
       db.collection("profiles").createIndex({ createdAt: -1 }),
-      db.collection("feedback").createIndex({ createdAt: -1 }),
-      db.collection("feedback").createIndex({ variant: 1 }),
+      db.collection("testers").createIndex({ registeredAt: -1 }),
+      db.collection("events").createIndex({ testerId: 1, createdAt: 1 }),
       db.collection("ai_generations").createIndex({ createdAt: -1 }),
     ]);
   }
@@ -103,7 +103,10 @@ interface MemoryStore {
   tryons: Map<string, string>;
   testers: Map<string, number>; // testerId -> AI generations used
   generations: number;
-  feedback: Record<string, unknown>[];
+  /** testerId -> name given at the gate (in-memory fallback for the testers collection). */
+  names: Map<string, { name: string; variant: string; userAgent: string; registeredAt: Date; lastSeenAt: Date }>;
+  /** Activity track (in-memory fallback for the events collection). */
+  events: { testerId: string; type: string; detail: string; createdAt: Date }[];
 }
 
 declare global {
@@ -112,7 +115,7 @@ declare global {
 
 export function memory(): MemoryStore {
   if (!global.__miraMemory) {
-    global.__miraMemory = { photos: new Map(), tryons: new Map(), testers: new Map(), generations: 0, feedback: [] };
+    global.__miraMemory = { photos: new Map(), tryons: new Map(), testers: new Map(), generations: 0, names: new Map(), events: [] };
   }
   const m = global.__miraMemory;
   const now = Date.now();

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { AiQuota, CartItem, FitPref, FitResult, Measurements, Product, Size, SizeRecommendation, StylistOutfit, Variant } from "./types";
+import type { AiQuota, CartItem, FitPref, FitResult, Measurements, Product, Size, SizeRecommendation, StylistOutfit, TesterInfo, Variant } from "./types";
 import { DEFAULT_MEASUREMENTS } from "./sizing";
 import { SEED_PRODUCTS } from "./products";
 
@@ -24,8 +24,6 @@ export interface MiraState {
   fit: FitResult | null;
   outfits: StylistOutfit[];
   cart: CartItem[];
-  /** Variants this tester has already given feedback for. */
-  feedbackGiven: Variant[];
   /** The look this tester spent their AI try-on on (image refetched from the server cache). */
   aiLook: { photoId: string; productId: string; colorHex: string; size: Size } | null;
 }
@@ -48,7 +46,6 @@ const initial: MiraState = {
   fit: null,
   outfits: [],
   cart: [],
-  feedbackGiven: [],
   aiLook: null,
 };
 
@@ -63,6 +60,13 @@ interface Ctx {
   quota: AiQuota | null;
   setQuota: (q: AiQuota | null) => void;
   aiAvailable: boolean;
+  /** Name given at the gate; null = not given yet; undefined = still loading from the server. */
+  testerName: string | null | undefined;
+  /** Save the tester's name on the server. Resolves with an error message, or null on success. */
+  registerName: (name: string) => Promise<string | null>;
+  /** Where to go after the name gate closes; a non-null value opens the gate. */
+  gateNext: string | null;
+  setGateNext: (next: string | null) => void;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -75,6 +79,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
   const [quota, setQuota] = useState<AiQuota | null>(null);
   const [aiAvailable, setAiAvailable] = useState(true);
+  const [testerName, setTesterName] = useState<string | null | undefined>(undefined);
+  const [gateNext, setGateNext] = useState<string | null>(null);
 
   useEffect(() => {
     // One-time sync from an external system (localStorage) after mount.
@@ -97,11 +103,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
     fetch("/api/tester")
       .then((r) => r.json())
-      .then((d: { quota: AiQuota | null; aiAvailable: boolean }) => {
+      .then((d: TesterInfo) => {
         setQuota(d.quota);
         setAiAvailable(d.aiAvailable);
+        setTesterName(d.name ?? null);
       })
-      .catch(() => {});
+      .catch(() => setTesterName(null));
   }, []);
 
   useEffect(() => {
@@ -123,11 +130,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => setToastMsg(null), 2400);
   }, []);
 
+  const registerName = useCallback<Ctx["registerName"]>(
+    async (name) => {
+      try {
+        const res = await fetch("/api/tester", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name, variant: state.variant }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { error?: string; name?: string };
+        if (!res.ok) return data.error || "Could not save your name.";
+        setTesterName(data.name ?? name);
+        return null;
+      } catch {
+        return "Network problem. Please check your connection and try again.";
+      }
+    },
+    [state.variant],
+  );
+
   const product = products.find((p) => p.id === state.productId) ?? products[0];
 
   const value = useMemo(
-    () => ({ state, set, toast, toastMsg, hydrated, products, product, quota, setQuota, aiAvailable }),
-    [state, set, toast, toastMsg, hydrated, products, product, quota, aiAvailable],
+    () => ({ state, set, toast, toastMsg, hydrated, products, product, quota, setQuota, aiAvailable, testerName, registerName, gateNext, setGateNext }),
+    [state, set, toast, toastMsg, hydrated, products, product, quota, aiAvailable, testerName, registerName, gateNext],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

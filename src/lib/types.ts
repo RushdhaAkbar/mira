@@ -78,29 +78,10 @@ export interface AiQuota {
   remaining: number;
 }
 
-/** One tester's feedback, as stored in MongoDB and shown in the admin portal. */
-export interface FeedbackInput {
-  variant: Variant;
-  overall: number; // 1-5
-  realism: number; // 1-5
-  fitConfidence: number; // 1-5
-  easeOfUse: number; // 1-5
-  purchaseIntent: number; // 1-5
-  photoComfort: number | null; // 1-5, AI version only (the standard version has no photo)
-  recommend: number; // 0-10 (NPS)
-  name: string; // required
-  liked: string;
-  improve: string;
-  ageRange: string;
-  gender: string;
-  shopsOnline: string;
-  email: string;
-  context: {
-    productId: string;
-    productName: string;
-    colorName: string;
-    triedSize: Size;
-    recommendedSize: Size | null;
-    aiRendered: boolean;
-  };
+/** What the client knows about the current tester (from /api/tester). */
+export interface TesterInfo {
+  /** Name typed into the gate before the AI try-on, or null if not yet given. */
+  name: string | null;
+  quota: AiQuota | null;
+  aiAvailable: boolean;
 }

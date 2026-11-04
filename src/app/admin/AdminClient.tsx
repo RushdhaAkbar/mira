@@ -28,7 +28,7 @@ export function AdminLogin({ configured }: { configured: boolean }) {
       <form onSubmit={submit} className="card w-full max-w-sm p-6">
         <div className="brand text-[0.85rem] text-ink">Mira</div>
         <h1 className="display mt-1 text-[1.6rem] text-ink">Admin portal</h1>
-        <p className="mt-1 text-[0.8rem] text-ink-soft">View feedback from the testing phase.</p>
+        <p className="mt-1 text-[0.8rem] text-ink-soft">See who accessed Mira during testing and what they did.</p>
         {!configured ? (
           <p className="mt-4 rounded-lg bg-warn/10 px-3 py-2 text-[0.78rem] text-ink">
             Set <code>ADMIN_PASSWORD</code> in the environment, then restart the app.

@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ComingSoon } from "@/components/ComingSoon";
-import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { ArrowIcon, SparkIcon } from "@/components/Icons";
 import { ChipRow, PageHeader, ProgressSteps, Section, Split, StickyCta, Swatch, useVariantGuard } from "@/components/ui";
 import { formatLKR } from "@/lib/products";
@@ -37,8 +36,6 @@ export default function TryOnPage() {
   useVariantGuard(["ai"], "/profile");
   const { state, set, toast, hydrated, product, quota, setQuota, aiAvailable } = useStore();
   const [busy, setBusy] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const promptedRef = useRef(false);
 
   const color = product.colors.find((c) => c.hex === state.colorHex) ?? product.colors[0];
   const look = state.photoId ? { photoId: state.photoId, productId: product.id, colorHex: color.hex, size: state.trySize } : null;
@@ -51,7 +48,6 @@ export default function TryOnPage() {
   const showAi = onAiLook && state.tryOnMode === "ai" && Boolean(state.tryOnImage);
   const hasAllowance = quota ? quota.remaining > 0 : true;
   const canGenerate = aiAvailable && Boolean(look) && !onAiLook && hasAllowance;
-  const feedbackDone = state.feedbackGiven.includes("ai");
 
   // Without an uploaded photo there is nothing to try on.
   useEffect(() => {
@@ -79,11 +75,6 @@ export default function TryOnPage() {
     if (r.quota) setQuota(r.quota);
     if (r.mode === "ai" && r.image) {
       set({ tryOnImage: r.image, tryOnMode: "ai", aiLook: look, tryOnNote: null });
-      // Ask for feedback straight after the try-on appears.
-      if (!feedbackDone && !promptedRef.current) {
-        promptedRef.current = true;
-        window.setTimeout(() => setFeedbackOpen(true), 2500);
-      }
     } else {
       set({ tryOnMode: "overlay", tryOnNote: r.message ?? "The AI try-on is unavailable right now." });
     }
@@ -196,14 +187,9 @@ export default function TryOnPage() {
       </Section>
 
       <Section>
-        <div className="flex gap-2">
-          <button type="button" className="btn btn-ghost" onClick={() => setFeedbackOpen(true)}>
-            {feedbackDone ? "Feedback sent ✓" : "Rate this try-on"}
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={addToBag}>
-            Add to bag
-          </button>
-        </div>
+        <button type="button" className="btn btn-ghost" onClick={addToBag}>
+          Add to bag
+        </button>
       </Section>
 
       <StickyCta>
@@ -223,7 +209,6 @@ export default function TryOnPage() {
       <ProgressSteps step={3} />
       <PageHeader eyebrow="Step 3 of 4" title="Virtual try-on" subtitle={`${product.name} · size ${state.trySize} · ${formatLKR(product.priceLKR)}`} />
       <Split left={stage} right={controls} />
-      <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

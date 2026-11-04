@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowIcon, CameraIcon, CheckIcon, ShieldIcon } from "@/components/Icons";
 import { PageHeader, ProgressSteps, Section, Split, StickyCta, useVariantGuard } from "@/components/ui";
 import { TRYON_RESET, useStore } from "@/lib/store";
@@ -23,7 +23,11 @@ export default function UploadPage() {
   const router = useRouter();
   // Photo try-on is part of the AI version only.
   const variant = useVariantGuard(["ai"], "/profile");
-  const { state, set } = useStore();
+  const { state, set, testerName, gateNext, setGateNext } = useStore();
+  // The AI try-on starts here, so anyone who skipped the landing button still has to give a name.
+  useEffect(() => {
+    if (testerName === null && gateNext === null) setGateNext("/upload");
+  }, [testerName, gateNext, setGateNext]);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<string | null>(null);

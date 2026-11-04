@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { DELIVERY_LKR } from "@/lib/products";
-import { getTesterId } from "@/lib/tester";
+import { getTesterId, logEvent } from "@/lib/tester";
 import type { CartItem, Variant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +24,14 @@ export async function POST(req: Request) {
   const subtotal = body.items.reduce((a, it) => a + it.priceLKR, 0);
   const orderNo = "MIRA-TEST-" + Math.floor(1000 + Math.random() * 9000);
 
+  const testerId = await getTesterId();
+  await logEvent(testerId, "demo_order", `${orderNo} · ${body.items.map((it) => `${it.name} ${it.size}`).join(", ")}`);
+
   const db = await getDb();
   if (db) {
     await db.collection("orders").insertOne({
       orderNo,
-      testerId: await getTesterId(),
+      testerId,
       variant: body.variant ?? "ai",
       items: body.items.map(({ productId, name, size, priceLKR }) => ({ productId, name, size, priceLKR })),
       payment: body.payment ?? "cod",

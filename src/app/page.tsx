@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ComingSoon } from "@/components/ComingSoon";
 import { ArrowIcon, ShieldIcon, SparkIcon } from "@/components/Icons";
 import { HowItWorks, Trending } from "@/components/Landing";
@@ -11,7 +11,14 @@ import { useEnterVariant, useStore } from "@/lib/store";
 /** Main landing: the AI version of Mira. (The version without AI lives at /standard.) */
 export default function HomePage() {
   useEnterVariant("ai");
-  const { quota } = useStore();
+  const router = useRouter();
+  const { quota, testerName, setGateNext } = useStore();
+
+  // Testers must give their name once before starting. The gate cannot be dismissed.
+  const start = () => {
+    if (testerName) router.push("/shop");
+    else setGateNext("/shop");
+  };
 
   return (
     <div className="fade-up">
@@ -27,9 +34,9 @@ export default function HomePage() {
             to buy. It takes about 3 minutes.
           </p>
           <div className="mt-5 flex flex-col gap-3 md:mt-7 md:max-w-sm">
-            <Link href="/shop" className="btn btn-primary">
+            <button type="button" onClick={start} className="btn btn-primary">
               Start my AI try-on <ArrowIcon width={16} height={16} />
-            </Link>
+            </button>
             <p className="flex items-center gap-1.5 text-[0.72rem] text-ink-soft">
               <SparkIcon width={14} height={14} className="text-accent" />
               {quota && quota.remaining === 0

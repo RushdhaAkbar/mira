@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import type { Variant } from "@/lib/types";
 import { BagIcon, CameraIcon, CheckIcon, HomeIcon, RulerIcon, ShopIcon, SparkIcon } from "./Icons";
+import { NameGate } from "./NameGate";
 
 type NavItem = { href: string; label: string; Icon: typeof HomeIcon; match: string[] };
 
@@ -42,7 +43,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-panel">
       <div className="bg-ink px-4 py-1.5 text-center text-[0.64rem] font-semibold tracking-wide text-ground md:text-[0.72rem]">
-        Testing phase · your feedback shapes Mira
+        Testing phase · thank you for trying Mira
       </div>
 
       <header className="sticky top-0 z-20 border-b border-line bg-panel/90 backdrop-blur">
@@ -81,6 +82,8 @@ export function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl pb-28 md:px-8 md:pb-16">{children}</main>
+
+      <NameGate />
 
       {toastMsg && (
         <div

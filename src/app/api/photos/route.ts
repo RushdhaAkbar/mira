@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseDataUrl, savePhoto } from "@/lib/photos";
 import { describeDbError, hasMongo } from "@/lib/mongodb";
+import { getTesterId, logEvent } from "@/lib/tester";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
 
   try {
     const id = await savePhoto(parsed.mime, parsed.base64);
+    await logEvent(await getTesterId(), "photo_uploaded");
     return NextResponse.json({ id, persistent: hasMongo(), expiresInHours: 24 });
   } catch (err) {
     console.error("[photos] save failed", err);

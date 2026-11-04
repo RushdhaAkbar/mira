@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { useEffect, useState } from "react";
 import { HeartIcon, ShareIcon } from "@/components/Icons";
 import { ChipRow, Gauge, PageHeader, ProgressSteps, Section, SizeChart, Split, StickyCta, Swatch } from "@/components/ui";
 import { formatLKR } from "@/lib/products";
@@ -23,9 +22,6 @@ export default function ResultsPage() {
   const variant = state.variant;
   const isAi = variant === "ai";
   const [error, setError] = useState<string | null>(null);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const promptedRef = useRef(false);
-  const feedbackDone = state.feedbackGiven.includes(variant);
   const color = product.colors.find((c) => c.hex === state.colorHex) ?? product.colors[0];
 
   useEffect(() => {
@@ -50,16 +46,6 @@ export default function ResultsPage() {
 
   const fit = state.fit;
   const busy = hydrated && !fit && !error;
-
-  // Standard version: this is the end of the journey, so ask for feedback once the result is shown.
-  useEffect(() => {
-    if (isAi || !fit || feedbackDone || promptedRef.current) return;
-    const t = window.setTimeout(() => {
-      promptedRef.current = true;
-      setFeedbackOpen(true);
-    }, 3500);
-    return () => window.clearTimeout(t);
-  }, [isAi, fit, feedbackDone]);
 
   const buy = (size: Size) => {
     set((s) => ({
@@ -144,18 +130,6 @@ export default function ResultsPage() {
         </div>
       </Section>
 
-      {!feedbackDone && (
-        <Section>
-          <button type="button" onClick={() => setFeedbackOpen(true)} className="card flex w-full items-center gap-3 border-accent/60 p-4 text-left">
-            <span className="display text-[1.6rem] text-accent">★</span>
-            <span className="flex-1">
-              <b className="block text-[0.86rem] text-ink">Tell us what you think</b>
-              <span className="text-[0.74rem] text-ink-soft">One minute of feedback helps our research.</span>
-            </span>
-          </button>
-        </Section>
-      )}
-
       {fit && (
         <>
           <Section title="Per-zone fit">
@@ -228,7 +202,6 @@ export default function ResultsPage() {
         subtitle={isAi ? `${product.name} · tried size ${state.trySize}` : `${product.name} · size ${state.trySize}`}
       />
       <Split left={visual} right={details} />
-      <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

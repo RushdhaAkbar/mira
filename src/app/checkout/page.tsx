@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { CheckIcon } from "@/components/Icons";
 import { ChipRow, homeFor, PageHeader, Section, StickyCta } from "@/components/ui";
 import { DELIVERY_LKR, formatLKR } from "@/lib/products";
@@ -19,12 +18,10 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ orderNo: string; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const items = state.cart;
   const subtotal = items.reduce((a, it) => a + it.priceLKR, 0);
   const total = subtotal + DELIVERY_LKR;
-  const feedbackDone = state.feedbackGiven.includes(state.variant);
 
   const place = async () => {
     setBusy(true);
@@ -39,7 +36,6 @@ export default function CheckoutPage() {
       if (!res.ok || !data.orderNo) throw new Error(data.error || "Could not place order");
       setDone({ orderNo: data.orderNo, total: data.total ?? total });
       set({ cart: [] });
-      if (!feedbackDone) window.setTimeout(() => setFeedbackOpen(true), 1500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not place order");
     } finally {
@@ -60,17 +56,11 @@ export default function CheckoutPage() {
             <p className="mt-1 text-[0.78rem] text-ink-soft">
               This was a demo checkout for the testing phase. Nothing was charged and nothing will be delivered.
             </p>
-            {!feedbackDone && (
-              <button type="button" className="btn btn-accent mt-5" onClick={() => setFeedbackOpen(true)}>
-                Give quick feedback
-              </button>
-            )}
-            <Link href={homeFor(state.variant)} className="btn btn-ghost mt-2">
+            <Link href={homeFor(state.variant)} className="btn btn-ghost mt-5">
               Back to home
             </Link>
           </div>
         </Section>
-        <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
       </div>
     );
   }
