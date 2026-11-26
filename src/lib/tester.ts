@@ -47,23 +47,38 @@ export async function getTesterName(testerId: string): Promise<string | null> {
   return typeof name === "string" && name ? name : null;
 }
 
-/** Save the name typed at the gate. Creates the tester record if it does not exist yet. */
-export async function registerTester(testerId: string, input: { name: string; variant: string; userAgent: string }): Promise<void> {
+/**
+ * Save a tester's name. Creates the tester record if it does not exist yet.
+ * `source` is "tester" when typed at the gate, "admin" when added in the admin portal
+ * (used for the version without AI, which has no gate).
+ */
+export async function registerTester(
+  testerId: string,
+  input: { name: string; variant: string; userAgent: string; source?: "tester" | "admin" },
+): Promise<void> {
   const now = new Date();
+  const source = input.source ?? "tester";
   const db = await getDb();
   if (!db) {
     const m = memory();
     const prev = m.names.get(testerId);
-    m.names.set(testerId, { ...input, registeredAt: prev?.registeredAt ?? now, lastSeenAt: now });
+    m.names.set(testerId, {
+      name: input.name,
+      variant: input.variant,
+      userAgent: input.userAgent || prev?.userAgent || "",
+      registeredAt: prev?.registeredAt ?? now,
+      lastSeenAt: source === "admin" ? (prev?.lastSeenAt ?? now) : now,
+      source,
+    });
     return;
   }
   // aiUsed must exist on insert: reserveGeneration() matches on `aiUsed: { $lt: limit }`.
+  const set: Record<string, unknown> = { name: input.name, variant: input.variant, nameSource: source };
+  if (input.userAgent) set.userAgent = input.userAgent;
+  if (source === "tester") set.lastSeenAt = now;
   await db.collection("testers").updateOne(
     { _id: testerId as never },
-    {
-      $set: { name: input.name, variant: input.variant, userAgent: input.userAgent, lastSeenAt: now },
-      $setOnInsert: { createdAt: now, registeredAt: now, aiUsed: 0 },
-    },
+    { $set: set, $setOnInsert: { createdAt: now, registeredAt: now, lastSeenAt: now, aiUsed: 0 } },
     { upsert: true },
   );
 }
@@ -136,11 +151,27 @@ export async function refundGeneration(testerId: string): Promise<void> {
 
 export type EventType = "registered" | "photo_uploaded" | "ai_tryon" | "ai_tryon_failed" | "fit_result" | "demo_order";
 
-/** Append one step to the tester's activity track (shown in the admin portal). Never throws. */
-export async function logEvent(testerId: string, type: EventType, detail = ""): Promise<void> {
+/**
+ * Append one step to the tester's activity track (shown in the admin portal). Never throws.
+ * `meta` records which version and browser the step came from, so testers who never
+ * gave a name (the version without AI) can still be listed and named by the admin.
+ */
+export async function logEvent(
+  testerId: string,
+  type: EventType,
+  detail = "",
+  meta: { variant?: string; userAgent?: string | null } = {},
+): Promise<void> {
   try {
     const db = await getDb();
-    const doc = { testerId, type, detail: detail.slice(0, 200), createdAt: new Date() };
+    const doc = {
+      testerId,
+      type,
+      detail: detail.slice(0, 200),
+      variant: meta.variant === "standard" ? "standard" : meta.variant === "ai" ? "ai" : undefined,
+      userAgent: (meta.userAgent ?? "").slice(0, 300) || undefined,
+      createdAt: new Date(),
+    };
     if (db) await db.collection("events").insertOne(doc);
     else memory().events.push(doc);
   } catch (err) {

@@ -104,9 +104,9 @@ interface MemoryStore {
   testers: Map<string, number>; // testerId -> AI generations used
   generations: number;
   /** testerId -> name given at the gate (in-memory fallback for the testers collection). */
-  names: Map<string, { name: string; variant: string; userAgent: string; registeredAt: Date; lastSeenAt: Date }>;
+  names: Map<string, { name: string; variant: string; userAgent: string; registeredAt: Date; lastSeenAt: Date; source?: "tester" | "admin" }>;
   /** Activity track (in-memory fallback for the events collection). */
-  events: { testerId: string; type: string; detail: string; createdAt: Date }[];
+  events: { testerId: string; type: string; detail: string; variant?: string; userAgent?: string; createdAt: Date }[];
 }
 
 declare global {

@@ -25,7 +25,10 @@ export async function POST(req: Request) {
   const orderNo = "MIRA-TEST-" + Math.floor(1000 + Math.random() * 9000);
 
   const testerId = await getTesterId();
-  await logEvent(testerId, "demo_order", `${orderNo} · ${body.items.map((it) => `${it.name} ${it.size}`).join(", ")}`);
+  await logEvent(testerId, "demo_order", `${orderNo} · ${body.items.map((it) => `${it.name} ${it.size}`).join(", ")}`, {
+    variant: body.variant,
+    userAgent: req.headers.get("user-agent"),
+  });
 
   const db = await getDb();
   if (db) {

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { EVENT_LABELS, getTesterRows, isAdmin } from "@/lib/admin";
+import { getTesterRows, isAdmin } from "@/lib/admin";
+import { EVENT_LABELS } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
-const COLUMNS = ["name", "version", "registeredAt", "lastSeenAt", "device", "aiTryOnsUsed", "activity"] as const;
+const COLUMNS = ["name", "nameAddedBy", "version", "firstSeen", "lastSeen", "device", "aiTryOnsUsed", "activity", "testerId"] as const;
 
 const csvCell = (v: unknown) => {
   const s = v === null || v === undefined ? "" : String(v);
@@ -17,12 +18,14 @@ export async function GET() {
   const lines = rows.map((r) =>
     [
       r.name,
+      r.nameSource ?? "",
       r.variant,
       r.registeredAt,
       r.lastSeenAt,
       r.device,
       r.aiUsed,
       r.events.map((e) => `${e.at.slice(0, 16).replace("T", " ")} ${EVENT_LABELS[e.type] ?? e.type}${e.detail ? ` (${e.detail})` : ""}`).join(" | "),
+      r.id,
     ]
       .map(csvCell)
       .join(","),

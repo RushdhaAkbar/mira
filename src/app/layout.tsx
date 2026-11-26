@@ -1,22 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { Shell } from "@/components/Shell";
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
+// Self-hosted (src/app/fonts) so builds and dev never depend on reaching Google Fonts.
+const playfair = localFont({
+  src: [
+    { path: "./fonts/PlayfairDisplay-Variable.woff2", weight: "400 900", style: "normal" },
+    { path: "./fonts/PlayfairDisplay-Italic-Variable.woff2", weight: "400 900", style: "italic" },
+  ],
   variable: "--font-playfair",
   display: "swap",
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  fallback: ["Didot", "Bodoni MT", "Georgia", "serif"],
 });
 
-const manrope = Manrope({
-  subsets: ["latin"],
+const manrope = localFont({
+  src: [{ path: "./fonts/Manrope-Variable.woff2", weight: "200 800", style: "normal" }],
   variable: "--font-manrope",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  fallback: ["Segoe UI", "system-ui", "sans-serif"],
 });
 
 export const metadata: Metadata = {

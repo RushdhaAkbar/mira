@@ -58,7 +58,10 @@ export async function POST(req: Request) {
     source: explained ? "claude" : "rules",
   };
 
-  await logEvent(await getTesterId(), "fit_result", `${product.name} · tried ${tried} · recommended ${rec.size} · score ${fit.score}`);
+  await logEvent(await getTesterId(), "fit_result", `${product.name} · tried ${tried} · recommended ${rec.size} · score ${fit.score}`, {
+    variant: body.variant,
+    userAgent: req.headers.get("user-agent"),
+  });
 
   const db = await getDb();
   if (db) {

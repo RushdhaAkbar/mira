@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   try {
     const before = await getTesterName(testerId);
     await registerTester(testerId, { name, variant, userAgent });
-    await logEvent(testerId, "registered", before && before !== name ? `${name} (was ${before})` : name);
+    await logEvent(testerId, "registered", before && before !== name ? `${name} (was ${before})` : name, { variant, userAgent });
   } catch (err) {
     console.error("[tester] register failed", err);
     return NextResponse.json({ error: "Could not save your name. Please try again." }, { status: 500 });

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   try {
     const id = await savePhoto(parsed.mime, parsed.base64);
-    await logEvent(await getTesterId(), "photo_uploaded");
+    await logEvent(await getTesterId(), "photo_uploaded", "", { variant: "ai", userAgent: req.headers.get("user-agent") });
     return NextResponse.json({ id, persistent: hasMongo(), expiresInHours: 24 });
   } catch (err) {
     console.error("[photos] save failed", err);

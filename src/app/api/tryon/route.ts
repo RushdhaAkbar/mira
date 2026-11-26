@@ -87,7 +87,10 @@ export async function POST(req: Request) {
     size,
   });
   await logGeneration({ testerId, productId: product.id, success: Boolean(rendered), ms: Date.now() - started });
-  await logEvent(testerId, rendered ? "ai_tryon" : "ai_tryon_failed", `${product.name} · ${color.name} · ${size}`);
+  await logEvent(testerId, rendered ? "ai_tryon" : "ai_tryon_failed", `${product.name} · ${color.name} · ${size}`, {
+    variant: "ai",
+    userAgent: req.headers.get("user-agent"),
+  });
 
   if (!rendered) {
     await refundGeneration(testerId);
